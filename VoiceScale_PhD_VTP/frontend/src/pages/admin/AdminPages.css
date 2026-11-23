@@ -1,0 +1,32 @@
+.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+.stat-card { cursor: pointer; transition: border-color .2s; }
+.stat-card:hover { border-color: var(--teal); }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+.three-col-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.two-col-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Bar charts */
+.bar-chart-wrap { display: flex; align-items: flex-end; gap: 4px; height: 64px; }
+.bar-col { width: 100%; border-radius: 3px 3px 0 0; cursor: pointer; transition: height .5s ease, opacity .2s; }
+.bar-col:hover { opacity: 1 !important; }
+.bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text4); font-family: var(--mono); margin-top: 6px; }
+
+/* Heat map */
+.heat-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; margin-bottom: 12px; }
+.heat-cell { aspect-ratio: 1; border-radius: 4px; cursor: pointer; transition: transform .1s ease; }
+
+/* Data table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead tr { border-bottom: 1px solid var(--border); background: var(--bg3); }
+.data-table th { padding: 10px 14px; font-size: 11px; font-weight: 600; color: var(--text4); text-align: left; text-transform: uppercase; letter-spacing: .5px; }
+
+/* Toggle switch */
+.vc-toggle { position: relative; display: inline-block; cursor: pointer; width: 36px; height: 20px; }
+.vc-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.vc-toggle-track { position: absolute; inset: 0; border-radius: 10px; background: var(--bg4); transition: background .2s; }
+.vc-toggle input:checked + .vc-toggle-track { background: var(--teal); }
+.vc-toggle-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .2s; }
+.vc-toggle input:checked + .vc-toggle-track::after { left: 19px; }
+
+@media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr)}.three-col-row{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.stats-grid,.charts-row,.three-col-row,.two-col-row{grid-template-columns:1fr}}

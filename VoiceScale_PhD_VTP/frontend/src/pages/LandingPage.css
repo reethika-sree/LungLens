@@ -1,0 +1,275 @@
+/* ═══════════════════════════════════════════════════
+   LandingPage.css — includes post-login animations
+═══════════════════════════════════════════════════ */
+
+/* ── Header ── */
+.lp-header{position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 40px;height:64px;display:flex;align-items:center;transition:background .25s,border-color .25s}
+.lp-header-inner{width:100%;max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lp-logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
+.lp-logo-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lp-logo-text{font-family:var(--body);font-size:20px;font-weight:500;color:var(--text)}
+.lp-logo-text span{color:var(--teal)}
+.lp-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+
+/* Role chip in header */
+.lp-role-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;border:1px solid;flex-shrink:0;animation:lpFadeIn .4s ease}
+
+/* Header buttons */
+.lp-btn-signin{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--body);transition:all .15s;display:flex;align-items:center;gap:6px}
+.lp-btn-signin:hover{border-color:var(--teal);color:var(--teal)}
+.lp-btn-signup{padding:7px 16px;border-radius:8px;border:none;background:var(--teal);color:#001a14;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .15s;display:flex;align-items:center;gap:6px}
+.lp-btn-signup:hover{filter:brightness(1.08)}
+.lp-user-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#001a14;cursor:pointer;flex-shrink:0;transition:transform .2s,box-shadow .2s;user-select:none}
+.lp-user-avatar:hover{transform:scale(1.08)}
+.lp-btn-logout{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--red-a);border:1px solid var(--red);border-radius:8px;color:var(--red);cursor:pointer;font-size:13px;transition:all .2s}
+.lp-btn-logout:hover{background:var(--red);color:white}
+
+/* "My Portal" button in header — post-login */
+.lp-btn-portal-header{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--teal-a);border:1px solid var(--teal);border-radius:8px;color:var(--teal);cursor:pointer;font-size:13px;transition:all .2s;white-space:nowrap}
+.lp-btn-portal-header:hover{background:var(--teal);color:white}
+
+/* ── PULSE animation on "My Portal" header button ── */
+@keyframes lpBtnPulse {
+  0%   { box-shadow: 0 0 0 0 currentColor; }
+  40%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.lp-btn-pulse {
+  animation: lpBtnPulse 1.1s ease 3, lpBtnPulse 1.4s ease 2.5s 2;
+}
+
+/* ── Avatar glow ── */
+@keyframes lpAvatarGlow {
+  0%,100% { box-shadow: 0 0 0 2px transparent; }
+  50%      { box-shadow: 0 0 0 4px rgba(0,232,181,.5); }
+}
+.lp-avatar-glow { animation: lpAvatarGlow 1s ease 4; }
+
+/* ── Hero ── */
+.lp-hero{padding:96px 40px 80px;text-align:center;position:relative;overflow:hidden}
+.lp-hero::before{content:'';position:absolute;top:-180px;left:50%;transform:translateX(-50%);width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(0,232,181,.06) 0%,transparent 65%);pointer-events:none}
+.lp-hero-content{max-width:680px;margin:0 auto;position:relative}
+.lp-hero-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;background:var(--teal-a);color:var(--teal);border:1px solid rgba(0,232,181,.25);text-transform:uppercase;letter-spacing:1px;margin-bottom:22px}
+.lp-hero-title{font-family:var(--head);font-size:54px;font-weight:800;letter-spacing:-2.5px;line-height:1.1;margin-bottom:20px}
+.lp-hero-title span{color:var(--teal)}
+.lp-hero-sub{font-size:17px;color:var(--text3);line-height:1.75;margin-bottom:36px;max-width:520px;margin-left:auto;margin-right:auto}
+.lp-hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* Primary / secondary CTA */
+.lp-btn-primary{padding:13px 28px;border-radius:10px;border:none;background:var(--teal);color:#001a14;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .2s;display:flex;align-items:center;gap:8px;position:relative;overflow:hidden}
+.lp-btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.lp-btn-secondary{padding:13px 28px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;font-family:var(--body);transition:all .15s;display:flex;align-items:center;gap:8px}
+.lp-btn-secondary:hover{border-color:var(--teal);color:var(--teal)}
+
+/* Portal hero CTA — shimmer + pulse */
+.lp-btn-portal-hero{position:relative;overflow:hidden}
+.lp-btn-shimmer{position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.25) 50%,transparent 60%);background-size:200% 100%;animation:lpShimmer 2.2s ease 1s 4}
+@keyframes lpShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+@keyframes lpHeroPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,232,181,.0); }
+  50%      { box-shadow: 0 0 0 12px rgba(0,232,181,.0); }
+  25%      { box-shadow: 0 0 0 6px rgba(0,232,181,.3); }
+}
+.lp-hero-portal-pulse { animation: lpHeroPulse 1.2s ease 4; }
+
+/* Signed-in chip below hero CTA */
+.lp-signed-in-chip{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:6px 14px;border-radius:20px;border:1px solid;font-size:12px;background:transparent}
+.lp-chip-enter{animation:lpSlideUp .4s ease .3s both}
+@keyframes lpSlideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Stats ── */
+.lp-stats{display:flex;justify-content:center;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.lp-stat{flex:1;min-width:130px;max-width:220px;text-align:center;padding:24px 20px;border-right:1px solid var(--border)}
+.lp-stat:last-child{border-right:none}
+.lp-stat-val{font-family:var(--head);font-size:32px;font-weight:800;color:var(--teal);letter-spacing:-1px}
+.lp-stat-lbl{font-size:12px;color:var(--text4);margin-top:3px}
+
+/* ── Portals ── */
+.lp-portals{padding:80px 40px;max-width:1200px;margin:0 auto}
+.lp-section-title{text-align:center;font-family:var(--head);font-size:34px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.lp-section-sub{text-align:center;font-size:15px;color:var(--text3);margin-bottom:32px}
+.lp-portal-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.lp-portal-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px 20px;display:flex;flex-direction:column;gap:12px;transition:all .25s ease;position:relative;cursor:pointer}
+.lp-portal-card:hover:not([style*="not-allowed"]){transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--teal)}
+.lp-portal-card:active:not([style*="not-allowed"]){transform:translateY(-2px)}
+
+/* Arrow hint above portals */
+.lp-portal-arrow-hint{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:20px}
+.lp-hint-enter{animation:lpSlideUp .5s ease .4s both}
+
+/* "YOUR PORTAL" crown badge */
+.lp-my-portal-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;border:1px solid;width:fit-content;font-family:var(--mono)}
+
+/* Spotlight animation on the user's portal card */
+@keyframes lpCardSpotlight {
+  0%   { box-shadow: 0 0 0 2px transparent; }
+  30%  { box-shadow: 0 0 0 4px currentColor, 0 8px 40px currentColor; }
+  70%  { box-shadow: 0 0 0 3px currentColor, 0 6px 28px currentColor; }
+  100% { box-shadow: 0 0 0 2px transparent; }
+}
+.lp-card-spotlight { animation: lpCardSpotlight 1.6s ease .5s 2; }
+
+.lp-pc-badge{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--text4);text-transform:uppercase;font-family:var(--mono)}
+.lp-pc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.lp-pc-name{font-family:var(--head);font-size:20px;font-weight:800}
+.lp-pc-desc{font-size:12px;color:var(--text2);line-height:1.7}
+.lp-pc-meta{font-size:10px;color:var(--text4);font-family:var(--mono)}
+.lp-pc-btn{margin-top:auto;padding:9px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;font-size:12px;font-weight:600;font-family:var(--body);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .18s}
+.lp-pc-btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.lp-pc-btn-active{animation:lpBtnBounce .5s ease .8s}
+@keyframes lpBtnBounce{0%,100%{transform:none}40%{transform:translateY(-3px)}70%{transform:translateY(-1px)}}
+
+/* ── Features ── */
+.lp-features{padding:80px 40px;background:var(--bg2);border-top:1px solid var(--border)}
+.lp-features-grid{max-width:1040px;margin:32px auto 0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.lp-feature-card{padding:24px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);transition:border-color .2s}
+.lp-feature-card:hover{border-color:var(--teal)}
+.lp-feature-icon{width:40px;height:40px;border-radius:10px;background:var(--teal-a);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--teal);margin-bottom:14px}
+.lp-feature-title{font-weight:700;font-size:15px;margin-bottom:6px}
+.lp-feature-desc{font-size:13px;color:var(--text3);line-height:1.7}
+
+/* ── Footer ── */
+.lp-footer{background:var(--bg2);border-top:1px solid var(--border);padding:28px 40px;text-align:center;font-size:12px;color:var(--text4);font-family:var(--mono);letter-spacing:1px;text-transform:uppercase}
+
+/* ════════════════════════════════════
+   POST-LOGIN: WELCOME BANNER
+════════════════════════════════════ */
+.lp-welcome-banner {
+  position: sticky;
+  top: 64px;
+  z-index: 99;
+  border-bottom: 2px solid var(--wb-color, var(--teal));
+  background: color-mix(in srgb, var(--wb-color, var(--teal)) 8%, var(--bg2));
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.lp-wb-enter { animation: lpWbSlide .45s cubic-bezier(.22,1,.36,1); }
+@keyframes lpWbSlide { from { transform: translateY(-100%); opacity:0; } to { transform: none; opacity:1; } }
+
+.lp-wb-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 11px 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lp-wb-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.lp-wb-text { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.lp-wb-title { font-size: 13px; font-weight: 700; }
+.lp-wb-sub { font-size: 12px; color: var(--text3); }
+.lp-wb-cta {
+  padding: 7px 18px; border-radius: 8px; border: none;
+  color: #001a14; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: var(--body);
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0; transition: filter .15s;
+  white-space: nowrap;
+}
+.lp-wb-cta:hover { filter: brightness(1.1); }
+.lp-wb-close {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+  background: transparent; color: var(--text3); font-size: 15px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+.lp-wb-close:hover { background: var(--bg3); color: var(--text); }
+
+/* Countdown progress bar at bottom of banner */
+.lp-wb-progress {
+  height: 2px;
+  animation: lpWbShrink 7s linear forwards;
+}
+@keyframes lpWbShrink { from { width: 100%; } to { width: 0%; } }
+
+/* ════════════════════════════════════
+   PARTICLE BURST
+════════════════════════════════════ */
+.lp-particles {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: visible;
+}
+.lp-particle {
+  position: absolute;
+  top: 0;
+  border-radius: 50%;
+  animation: lpParticleFly linear forwards;
+  opacity: 0;
+}
+@keyframes lpParticleFly {
+  0%   { transform: translateY(0)    rotate(0deg);   opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(340px) rotate(540deg); opacity: 0; }
+}
+
+/* ── Misc ── */
+@keyframes lpFadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+
+/* ── Responsive ── */
+@media(max-width:1100px){.lp-portal-cards{grid-template-columns:repeat(2,1fr)}.lp-features-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){
+  .lp-hero{padding:60px 20px 48px}
+  .lp-hero-title{font-size:36px;letter-spacing:-1.5px}
+  .lp-hero-sub{font-size:15px;margin-bottom:28px}
+  .lp-header{padding:0 16px}
+  .lp-portals,.lp-features{padding:48px 16px}
+  .lp-portal-cards{grid-template-columns:1fr;gap:20px}
+  .lp-features-grid{grid-template-columns:1fr}
+  .lp-stat{min-width:100px;padding:20px 16px}
+  .lp-stat-val{font-size:28px}
+  .lp-stat-lbl{font-size:11px}
+  .lp-hero-badge{font-size:10px;padding:4px 10px}
+  .lp-wb-inner{padding:10px 16px}
+  .lp-wb-sub{display:none}
+  .lp-role-chip{display:none}
+  .lp-section-title{font-size:28px;letter-spacing:-0.5px}
+  .lp-section-sub{font-size:14px;margin-bottom:24px}
+  .lp-portal-card{padding:20px 16px}
+  .lp-pc-icon{width:44px;height:44px}
+  .lp-pc-name{font-size:18px}
+  .lp-pc-desc{font-size:11px;line-height:1.6}
+  .lp-feature-card{padding:20px}
+  .lp-feature-icon{width:36px;height:36px;font-size:16px}
+  .lp-feature-title{font-size:14px}
+  .lp-feature-desc{font-size:12px}
+  .lp-hero-actions{flex-direction:column;align-items:center;gap:12px}
+  .lp-hero-actions .lp-btn-primary,.lp-hero-actions .lp-btn-secondary{width:100%;max-width:280px}
+  .lp-btn-primary,.lp-btn-secondary{padding:13px 24px;min-height:46px}
+}
+@media(max-width:520px){
+  .lp-btn-signin span,.lp-btn-logout span{display:none}
+  .lp-logo-text{font-size:16px}
+  .lp-btn-portal-header span{display:none}
+  .lp-wb-cta{font-size:11px;padding:6px 12px}
+  .lp-hero{padding:48px 16px 40px}
+  .lp-hero-title{font-size:32px;letter-spacing:-1px}
+  .lp-hero-sub{font-size:14px;margin-bottom:24px}
+  .lp-hero-badge{font-size:9px;padding:3px 8px}
+  .lp-section-title{font-size:24px}
+  .lp-section-sub{font-size:13px}
+  .lp-portal-card{padding:16px 12px}
+  .lp-pc-icon{width:40px;height:40px;font-size:20px}
+  .lp-pc-name{font-size:16px}
+  .lp-pc-desc{font-size:10px}
+  .lp-pc-meta{font-size:9px}
+  .lp-pc-btn{padding:8px 12px;font-size:11px;min-height:40px}
+  .lp-feature-card{padding:16px}
+  .lp-feature-icon{width:32px;height:32px;font-size:14px}
+  .lp-feature-title{font-size:13px}
+  .lp-feature-desc{font-size:11px}
+  .lp-stat{padding:16px 12px}
+  .lp-stat-val{font-size:24px}
+  .lp-stat-lbl{font-size:10px}
+  .lp-btn-primary,.lp-btn-secondary{padding:12px 20px;font-size:13px;min-height:44px}
+  .lp-hero-actions{gap:10px}
+}

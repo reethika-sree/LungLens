@@ -1,0 +1,37 @@
+# ── Backend / API ────────────────────────────────────────────────────────────
+bcrypt==4.0.1
+email-validator==2.3.0
+fastapi==0.115.6
+httpx==0.28.1
+motor==3.7.0
+passlib[bcrypt]==1.7.4
+pydantic==2.10.6
+pydantic-settings==2.8.0
+pymongo==4.11.3
+python-dotenv==1.0.1
+python-jose[cryptography]==3.5.0
+python-multipart==0.0.20
+uvicorn[standard]==0.34.0
+
+# ── ML Models ────────────────────────────────────────────────────────────────
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.6.1
+xgboost==2.1.3
+
+# ── AI Agents (LangGraph + LangChain) ────────────────────────────────────────
+langchain>=0.3.25,<0.4.0
+langchain-core>=0.3.55,<0.4.0
+langchain-community>=0.3.25,<0.4.0
+langgraph>=0.2.75
+langchain-anthropic>=0.3.10
+
+# ── RAG / Vector Store ───────────────────────────────────────────────────────
+faiss-cpu==1.9.0
+sentence-transformers==3.4.1
+
+# ── Scheduling ───────────────────────────────────────────────────────────────
+apscheduler==3.11.0
+
+# ── Fix for Windows build issues ─────────────────────────────────────────────
+greenlet==3.0.3

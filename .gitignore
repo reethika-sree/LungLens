@@ -1,0 +1,49 @@
+# ==============================================================================
+# Git Ignore Configuration - VoiceScale PhD VTP Repository
+# ==============================================================================
+
+# STRICT EXCLUSION: Original Reference Project & Legacy Submissions
+VoiceCare-PHC-main/
+VoiceCare-PHC-main
+VoiceCare_PHC_IdeaVerse2026.pdf
+VoiceCare_PHC_Submission.pptx
+scratch_test_edge.html
+
+# Scratch & Temporary Logs
+scratch/
+*.log
+*.tmp
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python Dependencies & Virtual Environments
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+**/env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Node.js Dependencies & Build Artifacts
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Specific
+.DS_Store
+Thumbs.db
+Desktop.ini

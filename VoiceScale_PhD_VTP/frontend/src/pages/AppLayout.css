@@ -1,0 +1,235 @@
+/* ═══════════════════════════════════════════════════════
+   AppLayout — shared header + top-nav + footer
+   Matches LandingPage design language exactly
+═══════════════════════════════════════════════════════ */
+
+/* Root wrapper */
+.al-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ── Header ── */
+.al-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  transition: background .25s, border-color .25s;
+}
+
+.al-header-inner {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Logo — identical to landing page */
+.al-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.al-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.al-logo-text {
+  font-family: var(--body);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+.al-logo-text span { color: var(--teal); }
+
+/* Role badge */
+.al-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  border: 1px solid;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+/* Spacer */
+.al-header-inner > .al-role-badge { margin-right: auto; }
+
+/* Right actions */
+.al-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Ghost button (Home link) */
+.al-btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--teal-a);
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  color: var(--teal);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.al-btn-ghost:hover {
+  background: var(--teal);
+  color: white;
+}
+
+/* Avatar — same as landing page lp-user-avatar */
+.al-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #001a14;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform .15s, box-shadow .15s;
+  user-select: none;
+}
+.al-avatar:hover { transform: scale(1.08); box-shadow: 0 0 0 3px rgba(0,232,181,.25); }
+
+/* Logout button — same styling as home but red */
+.al-btn-logout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--red-a);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.al-btn-logout:hover {
+  background: var(--red);
+  color: white;
+}
+
+/* ── Top Navigation Bar ── */
+.al-topnav {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.al-topnav-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.al-topnav-inner::-webkit-scrollbar { display: none; }
+
+.al-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 40px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--body);
+  transition: color .15s, background .15s, border-color .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.al-nav-item i { font-size: 13px; }
+.al-nav-item:hover { color: var(--text); background: var(--bg3); }
+.al-nav-item.active { font-weight: 600; }
+
+/* ── Main content area ── */
+.al-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override vc-page to remove its own padding / height quirks when inside layout */
+.al-main .vc-page {
+  flex: 1;
+  padding: 24px 32px;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Footer — identical to landing page lp-footer ── */
+.al-footer {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 22px 32px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text4);
+  font-family: var(--mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .al-header-inner { padding: 0 16px; height: 56px; }
+  .al-btn-ghost span { display: none; }
+  .al-btn-logout span { display: none; }
+  .al-role-badge { display: none; }
+  .al-topnav-inner { padding: 0 12px; }
+  .al-main .vc-page { padding: 16px; }
+}
+
+@media (max-width: 600px) {
+  .al-logo-text { font-size: 15px; }
+  .al-nav-item span { display: none; }
+  .al-nav-item { padding: 0 12px; }
+}

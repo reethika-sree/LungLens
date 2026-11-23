@@ -1,0 +1,359 @@
+/* ═══════════════════════════════════════════════════════════════════
+   VoiceCare PHC — Patient Chat Interface (ChatGPT-style)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Chat Top Bar ─────────────────────────────────────────────────── */
+.vc-chat-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.vc-chat-agent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vc-agent-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.vc-agent-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text1);
+}
+
+.vc-agent-status {
+  font-size: 12px;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── Language Badge ───────────────────────────────────────────────── */
+.vc-lang-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal);
+}
+
+.vc-lang-badge-flag {
+  font-size: 13px;
+  font-family: var(--mono);
+}
+
+/* ── Icon Buttons ─────────────────────────────────────────────────── */
+.vc-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vc-icon-btn:hover { background: var(--bg4); color: var(--teal); }
+.vc-icon-btn-red   { color: var(--red) !important; border-color: var(--red) !important; }
+
+/* ── Progress Bar ─────────────────────────────────────────────────── */
+.vc-chat-progress {
+  padding: 8px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.vc-cp-label {
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vc-cp-bar {
+  height: 4px;
+  background: var(--bg4);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.vc-cp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--blue));
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+/* ── Messages Scroll Area ─────────────────────────────────────────── */
+.vc-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+
+/* ── Message Rows ─────────────────────────────────────────────────── */
+.vc-cm-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.vc-cm-row.user  { justify-content: flex-end; }
+.vc-cm-row.ai    { justify-content: flex-start; }
+
+/* ── Avatars ──────────────────────────────────────────────────────── */
+.vc-cm-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vc-cm-avatar.ai   { background: linear-gradient(135deg, var(--teal), var(--blue)); color: #fff; }
+.vc-cm-avatar.user { background: var(--bg4); color: var(--text2); }
+
+/* ── Bubbles ──────────────────────────────────────────────────────── */
+.vc-cm-bubble {
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.vc-cm-bubble.ai {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text1);
+  border-bottom-left-radius: 4px;
+}
+
+.vc-cm-bubble.user {
+  background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* ── Meta (timestamp + replay) ────────────────────────────────────── */
+.vc-cm-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text4);
+}
+
+.vc-cm-meta.user { justify-content: flex-end; }
+
+.vc-cm-replay {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text4);
+  font-size: 12px;
+  padding: 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.vc-cm-replay:hover { color: var(--teal); }
+
+/* ── Typing Indicator ─────────────────────────────────────────────── */
+.typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0;
+  align-items: center;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text3);
+  animation: typingBounce 1.2s infinite;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%            { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ── Input Bar ────────────────────────────────────────────────────── */
+.vc-chat-inputbar {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 10px 12px 12px;
+  flex-shrink: 0;
+}
+
+/* Listening banner */
+.vc-listening-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(32, 201, 151, 0.12);
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--teal);
+  margin-bottom: 8px;
+}
+
+.vc-mic-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: micPulse 0.8s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes micPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* Input row */
+.vc-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 4px 6px 4px 10px;
+  transition: border-color 0.2s;
+}
+
+.vc-chat-input-row:focus-within {
+  border-color: var(--teal);
+}
+
+/* Mic toggle */
+.vc-mic-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg4);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.vc-mic-toggle:hover    { background: var(--teal); color: #fff; }
+.vc-mic-toggle.active   { background: var(--red); color: #fff; animation: micRing 1s infinite; }
+
+@keyframes micRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+}
+
+/* Text input */
+.vc-chat-text-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text1);
+  font-size: 15px;
+  padding: 8px 4px;
+  caret-color: var(--teal);
+}
+
+.vc-chat-text-input::placeholder { color: var(--text4); }
+.vc-chat-text-input:disabled     { opacity: 0.5; }
+
+/* Send button */
+.vc-send-btn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s, transform 0.1s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.vc-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.vc-send-btn:not(:disabled):hover { opacity: 0.9; transform: scale(1.03); }
+
+/* ── Quick Chips ──────────────────────────────────────────────────── */
+.vc-quick-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.vc-chip {
+  padding: 5px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vc-chip:hover        { background: var(--teal); border-color: var(--teal); color: #fff; }
+.vc-chip-skip         { margin-left: auto; color: var(--text4); }
+.vc-chip-skip:hover   { background: var(--bg4); border-color: var(--border); color: var(--text2); }

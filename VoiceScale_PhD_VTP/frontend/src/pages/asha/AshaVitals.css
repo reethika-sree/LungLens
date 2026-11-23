@@ -1,0 +1,5 @@
+/* ── Vitals Section ── */
+.asha-vitals-section{margin-bottom:16px}
+.asha-vitals-row{display:flex;gap:12px}
+.asha-bp-inputs{display:flex;align-items:center;gap:4px}
+.asha-bp-separator{font-size:16px;font-weight:600;color:var(--text3);margin:0 2px}

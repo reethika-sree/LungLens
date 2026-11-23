@@ -1,0 +1,236 @@
+/* User Management Page Styles */
+.user-management-page {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 24px;
+}
+
+.user-management-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.user-management-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.user-management-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: var(--primary-dark);
+}
+
+.user-management-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.user-management-title {
+  margin-bottom: 24px;
+}
+
+.user-management-title h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.user-management-title p {
+  font-size: 16px;
+  color: var(--text2);
+  margin: 0;
+}
+
+/* Stats */
+.users-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+/* Users Table */
+.users-table-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th {
+  background: var(--bg-tertiary);
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+
+.users-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+.users-table tr:hover {
+  background: var(--bg-tertiary);
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.user-email {
+  color: var(--text2);
+}
+
+.user-joined {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+/* Role Badge */
+.user-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Action Buttons */
+.action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 0 2px;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+
+/* Loading and Error States */
+.loading, .error {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 16px;
+}
+
+.error {
+  color: var(--red);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-management-page {
+    padding: 16px;
+  }
+
+  .users-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .users-table-container {
+    overflow-x: auto;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 12px 16px;
+    min-width: 120px;
+  }
+
+  .user-management-header-inner {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .user-management-header-right {
+    justify-content: space-between;
+  }
+}

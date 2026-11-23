@@ -1,0 +1,161 @@
+.card {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.positive { border-color: rgba(255,75,110,0.4); background: linear-gradient(135deg, var(--bg-card), rgba(255,75,110,0.05)); }
+.negative { border-color: rgba(0,230,118,0.4); background: linear-gradient(135deg, var(--bg-card), rgba(0,230,118,0.05)); }
+.unknown  { border-color: rgba(255,179,0,0.4);  background: linear-gradient(135deg, var(--bg-card), rgba(255,179,0,0.05));  }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusIcon { font-size: 1.4rem; }
+
+.statusText {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: -0.5px;
+}
+.positive .statusText { color: var(--danger); }
+.negative .statusText { color: var(--success); }
+.unknown  .statusText { color: var(--warning); }
+
+.confidence {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.confidenceLabel {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.confidenceValue {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.barWrapper {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+.barPositive { background: linear-gradient(90deg, #ff4b6e, #ff6b8a); }
+.barNegative { background: linear-gradient(90deg, #00e676, #00b894); }
+
+.riskRow, .probRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+}
+
+.riskLabel, .probLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.riskPill {
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+.riskHIGH     { background: var(--danger-dim);  color: var(--danger);  }
+.riskMODERATE { background: var(--warning-dim); color: var(--warning); }
+.riskLOW      { background: rgba(0,212,255,0.12); color: var(--accent-cyan); }
+.riskMINIMAL  { background: var(--success-dim); color: var(--success); }
+.riskUNKNOWN  { background: var(--bg-elevated); color: var(--text-muted); }
+
+.probValue {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.message {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--border-bright);
+}
+.positive .message { border-left-color: var(--danger); }
+.negative .message { border-left-color: var(--success); }
+.unknown  .message { border-left-color: var(--warning); }
+
+.recommendation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.recLabel {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.recText {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.factors { display: flex; flex-direction: column; gap: 8px; }
+.factorsLabel {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.factorsList { display: flex; flex-direction: column; gap: 4px; }
+.factorItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+}
+.factorTest   { color: var(--text-secondary); flex: 1; }
+.factorResult { color: var(--text-primary); flex: 1; text-align: center; }
+.factorWeight { color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.72rem; }
