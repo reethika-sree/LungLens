@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useToast } from '../../components/ToastProvider';
 import { useAuth } from '../../contexts/AuthContext';
-import AppLayout from '../AppLayout';
+import RoleLayout from '../../layouts/RoleLayout';
 import { patientApi, authApi, L2_FRONTEND_URL } from '../../api/client';
 
 interface PatientProfile {
@@ -158,7 +158,7 @@ export function PatientProfilePage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <RoleLayout activeNav="profile" pageTitle="Patient Profile">
         <div className="vc-page">
           <div className="vc-page-header">
             <div className="vc-ph-title">Loading Profile</div>
@@ -168,12 +168,12 @@ export function PatientProfilePage() {
             <div className="processing-spinner"></div>
           </div>
         </div>
-      </AppLayout>
+      </RoleLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <RoleLayout activeNav="profile" pageTitle="Patient Profile">
       <div className="vc-page">
         <div className="vc-page-header">
           <div className="vc-ph-title">My Profile</div>
@@ -529,6 +529,6 @@ export function PatientProfilePage() {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </RoleLayout>
   );
 }

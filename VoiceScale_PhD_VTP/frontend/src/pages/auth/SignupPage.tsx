@@ -30,9 +30,12 @@ export default function SignupPage() {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setLoading(true);
     try {
-      await signup(fullName, email, password, confirm, role);
-      // Always redirect to landing page after signup
-      navigate('/');
+      const u = await signup(fullName, email, password, confirm, role);
+      const dest = u?.role === 'doctor' ? '/doctor/dashboard'
+                 : u?.role === 'admin'  ? '/admin/dashboard'
+                 : u?.role === 'asha'   ? '/asha/dashboard'
+                 : '/patient/dashboard';
+      navigate(dest);
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Registration failed. Please try again.');
     } finally { setLoading(false); }

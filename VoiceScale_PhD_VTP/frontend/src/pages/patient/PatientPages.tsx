@@ -4,6 +4,7 @@ import { useToast } from '../../components/ToastProvider';
 import { useModal } from '../../components/ModalProvider';
 import { useProcessing } from '../../components/ProcessingProvider';
 import AppLayout from '../AppLayout';
+import RoleLayout from '../../layouts/RoleLayout';
 import './PatientPages.css';
 import { useVoiceProcess } from '../../hooks/useVoiceProcess';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -13,18 +14,13 @@ import { patientApi } from '../../api/client';
 // ═══════════════════════════════════════
 // LANGUAGES DATA
 // ═══════════════════════════════════════
-const LANGUAGES: { lang: LangKey; native: string; speakers: string; flag: string }[] = [
-  { lang:'Telugu',   native:'తెలుగు',    speakers:'83M', flag:'🇮🇳' },
-  { lang:'Hindi',    native:'हिन्दी',    speakers:'520M',flag:'🇮🇳' },
-  { lang:'English',  native:'English',   speakers:'1.5B',flag:'🇮🇳' },
-  { lang:'Tamil',    native:'தமிழ்',     speakers:'78M', flag:'🇮🇳' },
-  { lang:'Kannada',  native:'ಕನ್ನಡ',    speakers:'44M', flag:'🇮🇳' },
-  { lang:'Marathi',  native:'मराठी',     speakers:'83M', flag:'🇮🇳' },
-  { lang:'Bengali',  native:'বাংলা',     speakers:'230M',flag:'🇮🇳' },
-  { lang:'Gujarati', native:'ગુજરાતી',   speakers:'56M', flag:'🇮🇳' },
-  { lang:'Punjabi',  native:'ਪੰਜਾਬੀ',   speakers:'113M',flag:'🇮🇳' },
-  { lang:'Odia',     native:'ଓଡ଼ିଆ',     speakers:'35M', flag:'🇮🇳' },
-  { lang:'Malayalam',native:'മലയാളം',   speakers:'35M', flag:'🇮🇳' },
+// ═══════════════════════════════════════
+// LANGUAGES DATA — Strictly restricted to Telugu, Hindi, English
+// ═══════════════════════════════════════
+const LANGUAGES: { lang: LangKey; native: string; flag: string; desc: string }[] = [
+  { lang:'Telugu',   native:'తెలుగు',    flag:'🇮🇳', desc:'మీ మాతృభాషలో మాట్లాడండి' },
+  { lang:'Hindi',    native:'हिन्दी',    flag:'🇮🇳', desc:'अपनी भाषा में बात करें' },
+  { lang:'English',  native:'English',   flag:'🇬🇧', desc:'Speak in English' },
 ];
 
 // ═══════════════════════════════════════
@@ -33,44 +29,52 @@ const LANGUAGES: { lang: LangKey; native: string; speakers: string; flag: string
 export function PatientLanguagePage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [selected, setSelected] = useState<LangKey>(language);
 
   const selectLang = (lang: LangKey) => {
     setSelected(lang);
     setLanguage(lang);
+    sessionStorage.setItem('selectedLanguage', lang);
     showToast(`Language set to ${lang}`, 'var(--teal)', 'bi-globe2');
-    // Go to voice capture page with language state
     navigate('/patient/voice-capture', { state: { language: lang } });
   };
 
-  // ── LANGUAGE GRID: always shown in English so every user can find their language ──
   return (
-    <AppLayout>
-      <div className="pt-onboard-shell">
-        <div className="pt-onboard-hero" style={{ textAlign: 'center' }}>
-          <div className="pt-onboard-hero-title">Select your language</div>
-          <div className="pt-onboard-hero-sub">Choose the language you speak most comfortably. You can speak or type in this language throughout.</div>
+    <RoleLayout activeNav="screening" pageTitle="Language Selection">
+      <div className="pt-onboard-shell" style={{ maxWidth: 840, margin: '0 auto', padding: '20px 0' }}>
+        <div className="pt-onboard-hero" style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div className="pt-onboard-hero-title">Select your language / మీ భాషను ఎంచుకోండి</div>
+          <div className="pt-onboard-hero-sub">Choose your preferred language for speech-based TB intake and follow-up consultation.</div>
         </div>
 
-        <div className="pt-lang-grid">
+        <div className="pt-lang-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
           {LANGUAGES.map(l => (
             <button
               key={l.lang}
               className={`pt-lang-card ${selected===l.lang?'selected':''}`}
               onClick={() => selectLang(l.lang)}
+              style={{
+                padding: '28px 20px',
+                borderRadius: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 8,
+                cursor: 'pointer'
+              }}
             >
-              <div className="ptlc-flag">{l.flag}</div>
-              <div className="ptlc-native">{l.native}</div>
-              <div className="ptlc-en">{l.lang}</div>
-              <div className="ptlc-speakers">{l.speakers} speakers</div>
-              {selected===l.lang && <div className="ptlc-check"><i className="bi-check-circle-fill" /></div>}
+              <div className="ptlc-flag" style={{ fontSize: 36, marginBottom: 4 }}>{l.flag}</div>
+              <div className="ptlc-native" style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)' }}>{l.native}</div>
+              <div className="ptlc-en" style={{ fontSize: 14, fontWeight: 600, color: 'var(--teal)' }}>{l.lang}</div>
+              <div style={{ fontSize: 12, color: 'var(--text4)', textAlign: 'center', marginTop: 4 }}>{l.desc}</div>
+              {selected===l.lang && <div className="ptlc-check" style={{ marginTop: 10 }}><i className="bi-check-circle-fill" style={{ fontSize: 20, color: 'var(--teal)' }} /></div>}
             </button>
           ))}
         </div>
         <div style={{ height:32 }} />
       </div>
-    </AppLayout>
+    </RoleLayout>
   );
 }
 

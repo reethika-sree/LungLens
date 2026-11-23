@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ToastProvider';
 import { useAuth } from '../../contexts/AuthContext';
 import { patientApi, DotsCheckin, DotsStats } from '../../api/client';
-import AppLayout from '../AppLayout';
+import RoleLayout from '../../layouts/RoleLayout';
 
 export function PatientHistoryPage() {
   const { showToast } = useToast();
@@ -146,7 +146,7 @@ export function PatientHistoryPage() {
   const dotsCellOpacity = (c: DotsCheckin) => c.taken === null ? 0.4 : c.taken ? 0.85 : 0.7;
 
   return (
-    <AppLayout>
+    <RoleLayout activeNav="history" pageTitle="Health & DOTS Records">
       <div className="vc-page">
         {loading ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:300, flexDirection:'column', gap:10 }}>
@@ -344,6 +344,6 @@ export function PatientHistoryPage() {
           </>
         )}
       </div>
-    </AppLayout>
+    </RoleLayout>
   );
 }

@@ -18,9 +18,13 @@ export default function LoginPage() {
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     setLoading(true);
     try {
-      await login(email, password);
-      // Always redirect to landing page after login
-      navigate('/');
+      const u = await login(email, password);
+      // Role-specific redirection
+      const dest = u?.role === 'doctor' ? '/doctor/dashboard'
+                 : u?.role === 'admin'  ? '/admin/dashboard'
+                 : u?.role === 'asha'   ? '/asha/dashboard'
+                 : '/patient/dashboard';
+      navigate(dest);
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Invalid email or password.');
     } finally { setLoading(false); }

@@ -179,3 +179,60 @@ export const ashaApi = {
   sendReminder:     (patientId: string, data: any) => client.post(`/asha/reminder/${patientId}`, data),
   updateVitals:     (patientId: string, data: any) => client.post(`/asha/vitals/${patientId}`, data),
 };
+
+// ── NLP & Dynamic Dialogue API ────────────────────────────────────────────────
+export interface DialogueStartPayload {
+  language: string;
+  initial_speech: string;
+  record_id?: string;
+}
+
+export interface DialogueStepPayload {
+  session_id?: string;
+  language: string;
+  message: string;
+  state: any;
+  record_id?: string;
+}
+
+export interface TBPredictMLPayload {
+  record_id?: string;
+  symptoms: Record<string, any>;
+  language?: string;
+}
+
+export const nlpApi = {
+  startDialogue: (data: DialogueStartPayload) =>
+    client.post<{
+      session_id: string;
+      reply: string;
+      reply_local: string;
+      target_symptom: string | null;
+      detected_symptoms: Record<string, any>;
+      state: any;
+      done: boolean;
+    }>('/nlp/dialogue/start', data),
+  stepDialogue: (data: DialogueStepPayload) =>
+    client.post<{
+      session_id: string;
+      reply: string;
+      reply_local: string;
+      target_symptom: string | null;
+      symptoms: Record<string, any>;
+      state: any;
+      done: boolean;
+    }>('/nlp/dialogue/step', data),
+  predictTB: (data: TBPredictMLPayload) =>
+    client.post<{
+      risk: 'low' | 'medium' | 'high';
+      priority: 'P1' | 'P2' | 'P3' | 'P4';
+      risk_score: number;
+      confidence: number;
+      explanation: string[];
+      contributing_factors: string[];
+      medical_disclaimer: string;
+      ml_model: string;
+      symptoms_evaluated: Record<string, any>;
+      record_id?: string;
+    }>('/patient/predict-tb', data),
+};

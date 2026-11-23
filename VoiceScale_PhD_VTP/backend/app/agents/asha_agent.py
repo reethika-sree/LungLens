@@ -437,62 +437,10 @@ def _is_negated_in_clause(clause: str, match_pos: int, match_len: int) -> bool:
     return False
 
 
-def _keyword_extract(message: str, existing: dict) -> dict:
-    import re
-    text    = message.lower()
-    updated = dict(existing)
+from app.nlp.dialogue import extract_symptoms_from_speech, DynamicDialogueManager, parse_direct_answer
 
-    # Split into clinical clauses to prevent negation bleeding across independent symptoms
-    clause_delimiters = r'[,;\.\n!\?]|(?:\b(?:but|and|yet|however|although|though|except|because)\b)|(?:కానీ|మరియు|అయితే)|(?:लेकिन|पर|और|मगर)|(?:ஆனால்|மற்றும்)|(?:ಆದರೆ|ಮತ್ತು)'
-    clauses = [c.strip() for c in re.split(clause_delimiters, text) if c.strip()]
-    if not clauses:
-        clauses = [text]
-
-    # Duration parsing (e.g., 3 weeks, 1 month -> 4 weeks, 2 months -> 8 weeks)
-    m = re.search(r'(\d+)\s*(week|weeks|month|months|day|days|నెల|నెలలు|వారం|వారాలు|हफ्ते|हफ़्ते|महीना|महीने|కాలం|வாரம்|மாதம்|ತಿಂಗಳು|ವಾರ)', text)
-    duration_weeks = None
-    if m:
-        n    = int(m.group(1))
-        unit = m.group(2)
-        if any(x in unit for x in ['month', 'months', 'నెల', 'महीना', 'महीने', 'மாதம்', 'ತಿಂಗಳು']):
-            n *= 4
-        duration_weeks = n
-
-    # Check cough mention and clause-level negation
-    cough_found = False
-    cough_negated = False
-    for c in clauses:
-        for ck in _COUGH_KEYWORDS:
-            pos = c.find(ck)
-            if pos != -1:
-                cough_found = True
-                if _is_negated_in_clause(c, pos, len(ck)):
-                    cough_negated = True
-                break
-
-    if cough_negated:
-        updated["cough_weeks"] = 0
-    elif cough_found:
-        if duration_weeks is not None:
-            updated["cough_weeks"] = duration_weeks
-        elif "cough_weeks" not in updated or not updated["cough_weeks"]:
-            updated["cough_weeks"] = 2
-    elif duration_weeks is not None:
-        updated["cough_weeks"] = duration_weeks
-
-    # Multilingual symptom keywords with proximity negation check
-    for sym_key, keywords in _SYMPTOM_LEXICON.items():
-        for c in clauses:
-            for kw in keywords:
-                pos = c.find(kw)
-                if pos != -1:
-                    if _is_negated_in_clause(c, pos, len(kw)):
-                        updated[sym_key] = False
-                    else:
-                        updated[sym_key] = True
-                    break
-
-    return updated
+def _keyword_extract(message: str, existing: dict, language: str = "English") -> dict:
+    return extract_symptoms_from_speech(message, existing, language)
 
 
 # ─── Risk Scorer: XGBoost first, weighted rules fallback ──────────────────────
@@ -656,41 +604,53 @@ async def run_triage_agent(
     state_dict:  dict,
 ) -> dict:
     """
-    Main entry point. Called from the FastAPI /chat endpoint.
-
-    LangGraph StateGraph flow:
-      START → symptom_intake → rag_lookup → risk_score → (next_question | done)
-                                                                    ↓
-                                                           priority_assign → notify_doctor
+    Main entry point for dynamic triage.
+    Extracts symptoms from speech, detects negations, tracks answered targets,
+    and dynamically asks only contextually relevant follow-up questions.
     """
-    questions = TB_QUESTIONS.get(language, TB_QUESTIONS["English"])
-    symptoms  = state_dict.get("symptoms", {})
-    q_index   = state_dict.get("questionIndex", 0)
+    symptoms = dict(state_dict.get("symptoms", {}))
+    asked_targets = list(state_dict.get("asked_targets", []))
+    current_target = state_dict.get("current_target")
+    rounds = state_dict.get("rounds", 0)
 
-    # Greeting / start
+    # Initial start
     if message == "__START__":
+        initial_greetings = {
+            "English": "Hello! I am your AI health assistant. Please describe how you are feeling and what symptoms you have been experiencing.",
+            "Telugu": "నమస్కారం! నేను మీ AI ఆరోగ్య సహాయకుడిని. మీకు ఎలాంటి ఆరోగ్య సమస్యలు లేదా లక్షణాలు ఉన్నాయో దయచేసి చెప్పండి.",
+            "Hindi": "नमस्ते! मैं आपका AI स्वास्थ्य सहायक हूं। कृपया बताएं कि आप कैसा महसूस कर रहे हैं और आपको क्या लक्षण हैं।"
+        }
+        greeting = initial_greetings.get(language, initial_greetings["English"])
         return {
-            "reply":       questions[0],
-            "reply_local": questions[0],
+            "reply":       greeting,
+            "reply_local": greeting,
             "audio_b64":   "",
             "triage_state": {
                 "symptoms":      {},
-                "questionIndex": 1,
+                "asked_targets": ["initial"],
+                "current_target": None,
+                "rounds":        0,
                 "done":          False,
                 "ml_model":      "XGBoost" if _ml_loaded else "weighted-rules",
             },
         }
 
-    # RAG context retrieval
-    rag_ctx = get_rag_context(message) if RAG_AVAILABLE else ""
+    # If answering a specific targeted question (e.g. Avunu, Ledhu, Yes, No)
+    if current_target:
+        val, is_clear = parse_direct_answer(message, current_target, language)
+        if is_clear and val is not None:
+            symptoms[current_target] = val
 
-    # Symptom extraction (LLM or keyword fallback)
-    updated_symptoms = await llm_extract_symptoms(message, symptoms, rag_ctx)
-    new_index        = q_index + 1
+    # Also extract any free-text symptoms mentioned in this message
+    symptoms = extract_symptoms_from_speech(message, symptoms, language)
+    rounds += 1
 
-    # Session complete — compute final risk
-    if new_index >= len(questions):
-        risk_pct, priority = compute_risk_score(updated_symptoms)
+    # Check if session has collected sufficient clinical information
+    is_done = DynamicDialogueManager.should_terminate(symptoms, rounds)
+    next_q_info = None if is_done else DynamicDialogueManager.select_next_question(symptoms, asked_targets, language)
+
+    if is_done or not next_q_info:
+        risk_pct, priority = compute_risk_score(symptoms)
 
         reply_map = {
             "P1": (
@@ -718,25 +678,34 @@ async def run_triage_agent(
             "reply_local": reply,
             "audio_b64":   "",
             "triage_state": {
-                "symptoms":      updated_symptoms,
-                "questionIndex": new_index,
+                "symptoms":      symptoms,
+                "asked_targets": asked_targets,
+                "current_target": None,
+                "rounds":        rounds,
                 "done":          True,
                 "riskScore":     risk_pct,
                 "priority":      priority,
                 "ml_model":      "XGBoost" if _ml_loaded else "weighted-rules",
-                "rag_used":      bool(rag_ctx),
             },
         }
 
-    # Next question
-    next_q = questions[new_index]
+    # Next dynamic follow-up question
+    q_key = next_q_info["key"]
+    q_target = next_q_info["target"]
+    q_text = next_q_info["text"]
+
+    new_asked = list(asked_targets)
+    new_asked.append(q_key)
+
     return {
-        "reply":       next_q,
-        "reply_local": next_q,
+        "reply":       q_text,
+        "reply_local": q_text,
         "audio_b64":   "",
         "triage_state": {
-            "symptoms":      updated_symptoms,
-            "questionIndex": new_index,
+            "symptoms":      symptoms,
+            "asked_targets": new_asked,
+            "current_target": q_target,
+            "rounds":        rounds,
             "done":          False,
             "ml_model":      "XGBoost" if _ml_loaded else "weighted-rules",
         },

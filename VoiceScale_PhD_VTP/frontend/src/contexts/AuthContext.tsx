@@ -5,8 +5,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (full_name: string, email: string, password: string, confirm_password: string, role?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  signup: (full_name: string, email: string, password: string, confirm_password: string, role?: string) => Promise<User>;
   logout: () => void;
   setUser: (user: User | null) => void;
   showSessionExpiredModal: boolean;
@@ -63,12 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await authApi.loginJson({ email, password });
     localStorage.setItem('access_token', res.data.access_token);
     setUser(res.data.user);
+    return res.data.user;
   };
 
   const signup = async (full_name: string, email: string, password: string, confirm_password: string, role = 'patient') => {
     const res = await authApi.signup({ full_name, email, password, confirm_password, role });
     localStorage.setItem('access_token', res.data.access_token);
     setUser(res.data.user);
+    return res.data.user;
   };
 
   const logout = () => { localStorage.removeItem('access_token'); setUserState(null); };
