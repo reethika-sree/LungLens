@@ -1,4 +1,4 @@
-// VoiceCare PHC — Patient UI translations
+// LungLens — Patient UI translations
 // Covers all strings shown after language selection
 
 export type LangKey =

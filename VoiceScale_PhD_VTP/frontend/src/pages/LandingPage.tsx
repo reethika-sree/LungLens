@@ -127,7 +127,7 @@ export default function LandingPage() {
         <div className="lp-header-inner">
           <div className="lp-logo" onClick={() => navigate('/')}>
             <div className="lp-logo-icon"><i className="bi-lungs-fill" style={{ color:'#fff', fontSize:18 }} /></div>
-            <span className="lp-logo-text">Voice<span>Care</span> PHC</span>
+            <span className="lp-logo-text">Lung<span>Lens</span></span>
           </div>
           <div className="lp-header-actions">
             <ThemeToggleBtn />
@@ -315,7 +315,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="lp-footer">
-        <p>© 2026 VOICECARE PHC · WHISPER STT · DYNAMIC NLP · XGBOOST · ETHEREUM · FHIR R4</p>
+        <p>© 2026 LUNGLENS · WHISPER STT · DYNAMIC NLP · XGBOOST · ETHEREUM · FHIR R4</p>
       </footer>
     </div>
   );

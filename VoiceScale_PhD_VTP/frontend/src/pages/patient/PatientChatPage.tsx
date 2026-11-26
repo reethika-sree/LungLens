@@ -213,11 +213,11 @@ export function PatientChatPage() {
     } catch {
       // Fallback greeting if backend is down
       const greetings: Record<string, string> = {
-        Telugu: 'నమస్కారం! నేను VoiceCare PHC AI. మీకు ఎంత కాలం నుండి దగ్గు వస్తోంది?',
-        Hindi: 'नमस्ते! मैं VoiceCare PHC AI हूं। आपको कितने समय से खांसी है?',
-        Tamil: 'வணக்கம்! நான் VoiceCare PHC AI. உங்களுக்கு எவ்வளவு காலமாக இருமல் உள்ளது?',
-        Kannada: 'ನಮಸ್ಕಾರ! ನಾನು VoiceCare PHC AI. ನಿಮಗೆ ಎಷ್ಟು ಕಾಲದಿಂದ ಕೆಮ್ಮು ಬರುತ್ತಿದೆ?',
-        English: 'Hello! I\'m VoiceCare PHC AI. How long have you had this cough?',
+        Telugu: 'నమస్కారం! నేను LungLens AI. మీకు ఎంత కాలం నుండి దగ్గు వస్తోంది?',
+        Hindi: 'नमस्ते! मैं LungLens AI हूं। आपको कितने समय से खांसी है?',
+        Tamil: 'வணக்கம்! நான் LungLens AI. உங்களுக்கு எவ்வளவு காலமாக இருமல் உள்ளது?',
+        Kannada: 'ನಮಸ್ಕಾರ! ನಾನು LungLens AI. ನಿಮಗೆ ಎಷ್ಟು ಕಾಲದಿಂದ ಕೆಮ್ಮು ಬರುತ್ತಿದೆ?',
+        English: 'Hello! I\'m LungLens AI. How long have you had this cough?',
       };
       const text = greetings[language] || greetings['English'];
       const msg = addMessage({ role: 'ai', text });
@@ -445,7 +445,7 @@ export function PatientChatPage() {
               <i className="bi-robot" />
             </div>
             <div>
-              <div className="vc-agent-name">VoiceCare PHC AI</div>
+              <div className="vc-agent-name">LungLens AI</div>
               <div className="vc-agent-status">
                 <span className="vc-o-dot" />
                 {isLoading ? 'Thinking…' : isSpeaking ? 'Speaking…' : 'Online · TB Triage Assistant'}

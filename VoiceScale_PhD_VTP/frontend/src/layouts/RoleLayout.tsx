@@ -127,7 +127,7 @@ export default function RoleLayout({ children, activeNav, pageTitle }: RoleLayou
             <i className="bi-lungs-fill" style={{ color: '#fff', fontSize: 18 }} />
           </div>
           <div>
-            <div className="rl-brand-title">Voice<span>Care</span> PHC</div>
+            <div className="rl-brand-title">Lung<span>Lens</span></div>
             <div className="rl-brand-sub">TB Detection & Triage</div>
           </div>
         </div>

@@ -76,7 +76,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return (
     <div className="vc-loading-screen">
       <div className="vc-spinner" />
-      <p style={{ color:'var(--text3)', fontSize:14 }}>Loading VoiceCare PHC…</p>
+      <p style={{ color:'var(--text3)', fontSize:14 }}>Loading LungLens…</p>
     </div>
   );
   if (!isAuthenticated) return <Navigate to="/login" replace />;

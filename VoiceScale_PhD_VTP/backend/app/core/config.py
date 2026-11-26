@@ -6,7 +6,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "VoiceCare PHC"
+    APP_NAME: str = "LungLens"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 

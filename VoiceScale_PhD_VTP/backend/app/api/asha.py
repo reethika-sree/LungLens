@@ -231,11 +231,11 @@ async def send_dots_reminder(
 
     # Multilingual reminder message templates
     templates = {
-        "Telugu": f"నమస్కారం! వాయిస్‌కేర్ PHC నుండి జ్ఞాపిక: దయచేసి ఈరోజు (రోజు {day}) మీ DOTS మందులను వేసుకోండి. ఏవైనా సమస్యలు ఉంటే మీ ఆశా కార్యకర్తను సంప్రదించండి.",
-        "Hindi": f"नमस्ते! वॉयसकेयर PHC से अनुस्मारक: कृपया आज (दिन {day}) अपनी डॉट्स (DOTS) दवा समय पर लें।",
-        "Tamil": f"வணக்கம்! வாய்ஸ்கேர் PHC நினைவூட்டல்: தயவுசெய்து இன்று (நாள் {day}) உங்கள் DOTS மாத்திரையை எடுத்துக்கொள்ளுங்கள்.",
-        "Kannada": f"ನಮಸ್ಕಾರ! ವಾಯ್ಸ್ ಕೇರ್ PHC ಯಿಂದ ನೆನಪೋಲೆ: ದಯವಿಟ್ಟು ಇಂದು (ದಿನ {day}) ನಿಮ್ಮ ಡಾಟ್ಸ್ (DOTS) ಔಷಧಿಯನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ.",
-        "English": f"Hello! VoiceCare PHC reminder: Please take your daily DOTS medication for Day {day}. Stay regular on your treatment schedule.",
+        "Telugu": f"నమస్కారం! LungLens నుండి జ్ఞాపిక: దయచేసి ఈరోజు (రోజు {day}) మీ DOTS మందులను వేసుకోండి. ఏవైనా సమస్యలు ఉంటే మీ ఆశా కార్యకర్తను సంప్రదించండి.",
+        "Hindi": f"नमस्ते! LungLens से अनुस्मारक: कृपया आज (दिन {day}) अपनी डॉट्स (DOTS) दवा समय पर लें।",
+        "Tamil": f"வணக்கம்! LungLens நினைவூட்டல்: தயவுசெய்து இன்று (நாள் {day}) உங்கள் DOTS மாத்திரையை எடுத்துக்கொள்ளுங்கள்.",
+        "Kannada": f"ನಮಸ್ಕಾರ! LungLens ಯಿಂದ ನೆನಪೋಲೆ: ದಯವಿಟ್ಟು ಇಂದು (ದಿನ {day}) ನಿಮ್ಮ ಡಾಟ್ಸ್ (DOTS) ಔಷಧಿಯನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ.",
+        "English": f"Hello! LungLens reminder: Please take your daily DOTS medication for Day {day}. Stay regular on your treatment schedule.",
     }
     reminder_msg = templates.get(lang, templates["English"])
 

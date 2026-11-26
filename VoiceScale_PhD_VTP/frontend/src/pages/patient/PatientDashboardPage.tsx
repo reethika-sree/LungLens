@@ -321,7 +321,7 @@ export default function PatientDashboardPage() {
         <div className="dash-disclaimer">
           <i className="bi-exclamation-triangle-fill" />
           <div>
-            <strong>Important Clinical Disclaimer:</strong> VoiceCare PHC is an AI-powered symptom screening and triage assistance tool. It provides probabilistic preliminary evaluations and does not constitute a confirmatory medical diagnosis. If you experience hemoptysis (blood in sputum), severe breathlessness, or persistent cough exceeding two weeks, immediately visit your nearest Primary Health Centre (PHC) or Government Chest Hospital for confirmatory sputum microscopy, CBNAAT/GeneXpert, and chest radiography.
+            <strong>Important Clinical Disclaimer:</strong> LungLens is an AI-powered symptom screening and triage assistance tool. It provides probabilistic preliminary evaluations and does not constitute a confirmatory medical diagnosis. If you experience hemoptysis (blood in sputum), severe breathlessness, or persistent cough exceeding two weeks, immediately visit your nearest Primary Health Centre (PHC) or Government Chest Hospital for confirmatory sputum microscopy, CBNAAT/GeneXpert, and chest radiography.
           </div>
         </div>
       </div>

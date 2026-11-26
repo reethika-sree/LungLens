@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import translations, { type LangKey, type Translations } from './translations';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { setLanguage as setLanguageAction } from '../store/slices/languageSlice';
 
 interface LanguageContextType {
   language: LangKey;
@@ -9,22 +11,12 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'vc_patient_language';
-
-function getSavedLang(): LangKey {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && saved in translations) return saved as LangKey;
-  } catch {}
-  return 'English';
-}
-
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LangKey>(getSavedLang);
+  const dispatch = useAppDispatch();
+  const language = useAppSelector(state => state.language.language);
 
   const setLanguage = (lang: LangKey) => {
-    setLanguageState(lang);
-    try { localStorage.setItem(STORAGE_KEY, lang); } catch {}
+    dispatch(setLanguageAction(lang));
   };
 
   return (

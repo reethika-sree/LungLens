@@ -47,7 +47,7 @@ def _colab(path: str) -> str:
 
 TB_QUESTIONS = {
     "English": [
-        "Hello! I'm VoiceCare PHC AI, your health assistant. How long have you had this cough?",
+        "Hello! I'm LungLens AI, your health assistant. How long have you had this cough?",
         "Do you have fever, especially at night?",
         "Have you lost weight recently without trying to?",
         "Do you cough up any blood or notice blood in your sputum?",
@@ -56,7 +56,7 @@ TB_QUESTIONS = {
         "What is your occupation? Do you work in mining, construction, or a crowded place?",
     ],
     "Telugu": [
-        "నమస్కారం! నేను VoiceCare PHC AI, మీ ఆరోగ్య సహాయకుడిని. మీకు ఎంత కాలం నుండి దగ్గు వస్తోంది?",
+        "నమస్కారం! నేను LungLens AI, మీ ఆరోగ్య సహాయకుడిని. మీకు ఎంత కాలం నుండి దగ్గు వస్తోంది?",
         "మీకు జ్వరం వస్తోందా, ముఖ్యంగా రాత్రిపూట?",
         "మీరు ఇటీవల బరువు తగ్గారా?",
         "దగ్గుతో రక్తం వస్తోందా?",
@@ -65,7 +65,7 @@ TB_QUESTIONS = {
         "మీరు ఏ పని చేస్తారు? గనులు, నిర్మాణ పని లేదా రద్దీ ప్రదేశంలో పని చేస్తారా?",
     ],
     "Hindi": [
-        "नमस्ते! मैं VoiceCare PHC AI हूं। आपको कितने समय से खांसी है?",
+        "नमस्ते! मैं LungLens AI हूं। आपको कितने समय से खांसी है?",
         "क्या आपको बुखार है, खासकर रात में?",
         "क्या आपका वजन बिना कोशिश किए कम हो गया है?",
         "क्या खांसी में खून आता है?",
@@ -74,7 +74,7 @@ TB_QUESTIONS = {
         "आप क्या काम करते हैं? क्या खदान, निर्माण या भीड़भाड़ वाली जगह पर काम करते हैं?",
     ],
     "Tamil": [
-        "வணக்கம்! நான் VoiceCare PHC AI. உங்களுக்கு எவ்வளவு காலமாக இருமல் உள்ளது?",
+        "வணக்கம்! நான் LungLens AI. உங்களுக்கு எவ்வளவு காலமாக இருமல் உள்ளது?",
         "உங்களுக்கு காய்ச்சல் இருக்கிறதா, குறிப்பாக இரவில்?",
         "சமீபத்தில் எடை குறைந்திருக்கிறதா?",
         "இருமலில் இரத்தம் வருகிறதா?",

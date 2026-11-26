@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version="3.0.0",
-    description="VoiceCare PHC — AI-powered TB triage | 4 roles: Patient · Doctor · Admin · ASHA",
+    description="LungLens — AI-powered TB triage | 4 roles: Patient · Doctor · Admin · ASHA",
     openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url=f"{settings.API_V1_PREFIX}/docs",
     redoc_url=f"{settings.API_V1_PREFIX}/redoc",

@@ -57,10 +57,10 @@ export default function LoginPage() {
         <div className="auth-card">
           <div className="auth-logo-row">
             <div className="auth-logo-icon"><i className="bi-lungs-fill" style={{ color: '#fff', fontSize: 15 }} /></div>
-            <span className="auth-logo-text" style={{ color: 'var(--text)' }}>Voice<span>Care</span> PHC</span>
+            <span className="auth-logo-text" style={{ color: 'var(--text)' }}>Lung<span>Lens</span></span>
           </div>
           <div className="auth-title">Welcome back</div>
-          <div className="auth-subtitle">Sign in to access your VoiceCare PHC portal</div>
+          <div className="auth-subtitle">Sign in to access your LungLens portal</div>
 
           {error && <div className="auth-error"><i className="bi-exclamation-circle-fill" /> {error}</div>}
 

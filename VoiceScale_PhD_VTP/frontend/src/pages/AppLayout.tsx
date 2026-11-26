@@ -94,7 +94,7 @@ export default function AppLayout({ children, activeNav }: AppLayoutProps) {
             <div className="al-logo-icon">
               <i className="bi-lungs-fill" style={{ color: '#fff', fontSize: 16 }} />
             </div>
-            <span className="al-logo-text">Voice<span>Care</span> PHC</span>
+            <span className="al-logo-text">Lung<span>Lens</span></span>
           </div>
 
           {/* Role badge */}
@@ -196,7 +196,7 @@ export default function AppLayout({ children, activeNav }: AppLayoutProps) {
 
       {/* ════════ FOOTER ════════ */}
       <footer className="al-footer">
-        <p>© 2026 VOICECARE PHC · AI-POWERED TB TRIAGE · 4 PORTALS · PATIENT · DOCTOR · ASHA · ADMIN</p>
+        <p>© 2026 LUNGLENS · AI-POWERED TB TRIAGE · 4 PORTALS · PATIENT · DOCTOR · ASHA · ADMIN</p>
       </footer>
     </div>
   );

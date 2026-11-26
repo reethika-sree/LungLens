@@ -226,7 +226,7 @@ export function PatientVoicePage() {
 // STEP 3 — AI CHAT
 // ═══════════════════════════════════════
 const CHAT_FLOW = [
-  { bot: 'నమస్కారం! I\'m VoiceCare PHC AI. <b>How long have you had this cough?</b>' },
+  { bot: 'నమస్కారం! I\'m LungLens AI. <b>How long have you had this cough?</b>' },
   { user:'రెండు నెలల నుండి దగ్గు వస్తోంది', bot:'Understood — 8 weeks of cough noted. <b>Do you have fever, especially at night?</b>' },
   { user:'అవును, రాత్రి జ్వరం వస్తోంది', bot:'Night fever noted. <b>Have you lost weight recently without trying to?</b>' },
   { user:'అవును బరువు తగ్గిపోయాను', bot:'Weight loss noted. <b>Do you cough up any blood?</b>' },

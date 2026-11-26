@@ -45,7 +45,7 @@ export default function SignupPage() {
     <div className="auth-page">
       <div className="auth-left">
         <div style={{ marginBottom: 28 }}>
-          <div className="auth-brand-title">Join<br /><span>VoiceCare PHC</span></div>
+          <div className="auth-brand-title">Join<br /><span>LungLens</span></div>
         </div>
         <p className="auth-brand-sub">Register as a patient, doctor, ASHA worker, or district administrator.</p>
         <div className="auth-feature-list">
@@ -67,10 +67,10 @@ export default function SignupPage() {
         <div className="auth-card">
           <div className="auth-logo-row">
             <div className="auth-logo-icon"><i className="bi-lungs-fill" style={{ color: '#fff', fontSize: 15 }} /></div>
-            <span className="auth-logo-text" style={{ color: 'var(--text)' }}>Voice<span>Care</span> PHC</span>
+            <span className="auth-logo-text" style={{ color: 'var(--text)' }}>Lung<span>Lens</span></span>
           </div>
           <div className="auth-title">Create account</div>
-          <div className="auth-subtitle">Register to access VoiceCare PHC portals</div>
+          <div className="auth-subtitle">Register to access LungLens portals</div>
           {error && <div className="auth-error"><i className="bi-exclamation-circle-fill" /> {error}</div>}
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-field">

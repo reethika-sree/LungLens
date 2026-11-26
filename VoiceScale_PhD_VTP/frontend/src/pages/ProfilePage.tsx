@@ -146,7 +146,7 @@ export default function ProfilePage() {
                 <i className="bi-heart-pulse-fill" /> Active Patient
               </span>
               <span className="profile-badge profile-badge-secondary">
-                <i className="bi-hospital-fill" /> VoiceCare PHC
+                <i className="bi-hospital-fill" /> LungLens
               </span>
             </div>
           </div>
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                 <i className="bi-heart-pulse-fill" /> Verified Doctor
               </span>
               <span className="profile-badge profile-badge-secondary">
-                <i className="bi-hospital-fill" /> VoiceCare PHC
+                <i className="bi-hospital-fill" /> LungLens
               </span>
             </div>
           </div>
@@ -467,7 +467,7 @@ export default function ProfilePage() {
                 <i className="bi-house-heart-fill" /> Community Health Worker
               </span>
               <span className="profile-badge profile-badge-secondary">
-                <i className="bi-hospital-fill" /> VoiceCare PHC
+                <i className="bi-hospital-fill" /> LungLens
               </span>
             </div>
           </div>
@@ -574,7 +574,7 @@ export default function ProfilePage() {
             <p className="profile-hero-subtitle">System administration and district oversight</p>
             <div className="profile-hero-badges">
               <span className="profile-badge profile-badge-primary"><i className="bi-graph-up-arrow" /> System Administrator</span>
-              <span className="profile-badge profile-badge-secondary"><i className="bi-hospital-fill" /> VoiceCare PHC</span>
+              <span className="profile-badge profile-badge-secondary"><i className="bi-hospital-fill" /> LungLens</span>
             </div>
           </div>
         </div>
@@ -663,7 +663,7 @@ export default function ProfilePage() {
             <div className="profile-logo-icon">
               <i className="bi-lungs-fill" style={{ color: '#fff', fontSize: 16 }} />
             </div>
-            <span className="profile-logo-text">Voice<span>Care</span> PHC</span>
+            <span className="profile-logo-text">Lung<span>Lens</span></span>
           </div>
           <div className="profile-header-right">
             <ThemeToggleBtn />

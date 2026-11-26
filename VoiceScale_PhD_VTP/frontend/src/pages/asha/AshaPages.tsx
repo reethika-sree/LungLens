@@ -131,7 +131,7 @@ export function AshaPatientListPage() {
   return (
     <AshaMobileShell active="patients">
       <AshaTopBar
-        title="VoiceCare PHC"
+        title="LungLens"
         subtitle={user?.full_name || 'ASHA Worker'}
         rightEl={
           <button className="asha-avatar-btn" onClick={() => navigate('/profile')}>

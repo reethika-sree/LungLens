@@ -36,7 +36,7 @@ export default function PatientLoginPage() {
     <div className="auth-page">
       <div className="auth-left">
         <div style={{ marginBottom: 28 }}>
-          <div className="auth-brand-title">Patient Portal<br /><span>VoiceCare PHC</span></div>
+          <div className="auth-brand-title">Patient Portal<br /><span>LungLens</span></div>
         </div>
         <p className="auth-brand-sub">
           Welcome to the patient health portal. Sign in to access your confidential voice screening records, AI-powered TB triage assessments, and daily medication tracker.

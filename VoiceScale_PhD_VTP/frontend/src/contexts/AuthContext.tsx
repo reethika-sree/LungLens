@@ -1,5 +1,15 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { authApi, type User } from '../api/client';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import {
+  fetchCurrentUser,
+  loginUser,
+  signupUser,
+  logout as logoutAction,
+  setUser as setUserAction,
+  setShowSessionExpiredModal as setModalAction,
+  setAuthLoading,
+} from '../store/slices/authSlice';
+import type { User } from '../api/client';
 
 interface AuthContextType {
   user: User | null;
@@ -16,29 +26,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
-
-  const setUser = (u: User | null) => setUserState(u);
+  const dispatch = useAppDispatch();
+  const { user, isLoading, isAuthenticated, showSessionExpiredModal } = useAppSelector(state => state.auth);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
-      authApi.getMe()
-        .then(res => setUser(res.data))
-        .catch(() => localStorage.removeItem('access_token'))
-        .finally(() => setIsLoading(false));
+      dispatch(fetchCurrentUser());
     } else {
-      setIsLoading(false);
+      dispatch(setAuthLoading(false));
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
-    const handle = () => { setShowSessionExpiredModal(true); logout(); };
+    const handle = () => {
+      dispatch(setModalAction(true));
+      dispatch(logoutAction());
+    };
     window.addEventListener('sessionExpired', handle);
     return () => window.removeEventListener('sessionExpired', handle);
-  }, []);
+  }, [dispatch]);
 
   // Proactive JWT expiry check every 30s
   useEffect(() => {
@@ -48,35 +55,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.exp <= Date.now() / 1000 + 30) {
-          setShowSessionExpiredModal(true);
-          logout();
+          dispatch(setModalAction(true));
+          dispatch(logoutAction());
         }
       } catch {}
     };
     check();
     const id = setInterval(check, 30000);
     return () => clearInterval(id);
-  }, []);
+  }, [dispatch]);
 
-  const login = async (email: string, password: string) => {
-    logout();
-    const res = await authApi.loginJson({ email, password });
-    localStorage.setItem('access_token', res.data.access_token);
-    setUser(res.data.user);
-    return res.data.user;
+  const login = async (email: string, password: string): Promise<User> => {
+    const res = await dispatch(loginUser({ email, password })).unwrap();
+    return res.user;
   };
 
-  const signup = async (full_name: string, email: string, password: string, confirm_password: string, role = 'patient') => {
-    const res = await authApi.signup({ full_name, email, password, confirm_password, role });
-    localStorage.setItem('access_token', res.data.access_token);
-    setUser(res.data.user);
-    return res.data.user;
+  const signup = async (
+    full_name: string,
+    email: string,
+    password: string,
+    confirm_password: string,
+    role = 'patient'
+  ): Promise<User> => {
+    const res = await dispatch(
+      signupUser({ full_name, email, password, confirm_password, role })
+    ).unwrap();
+    return res.user;
   };
 
-  const logout = () => { localStorage.removeItem('access_token'); setUserState(null); };
+  const logout = () => {
+    dispatch(logoutAction());
+  };
+
+  const setUser = (u: User | null) => {
+    dispatch(setUserAction(u));
+  };
+
+  const setShowSessionExpiredModal = (show: boolean) => {
+    dispatch(setModalAction(show));
+  };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, login, signup, logout, setUser, showSessionExpiredModal, setShowSessionExpiredModal }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        isAuthenticated,
+        login,
+        signup,
+        logout,
+        setUser,
+        showSessionExpiredModal,
+        setShowSessionExpiredModal,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
