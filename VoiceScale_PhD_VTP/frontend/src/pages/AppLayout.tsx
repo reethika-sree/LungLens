@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggleBtn } from '../contexts/ThemeContext';
-import { patientApi, L2_FRONTEND_URL } from '../api/client';
+import { patientApi } from '../api/client';
 import './AppLayout.css';
 
 // ─── Portal nav config per role ────────────────────────────────────────────
@@ -109,12 +109,11 @@ export default function AppLayout({ children, activeNav }: AppLayoutProps) {
           <div className="al-header-right">
             <ThemeToggleBtn />
 
-            {/* L2 Portal button — shown in header for patients when referred */}
+            {/* L2 Portal button — navigates inside LungLens Patient Portal */}
             {role === 'patient' && l2Referred && (
-              <a
-                href={L2_FRONTEND_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => navigate('/patient/l2-detection')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -125,16 +124,15 @@ export default function AppLayout({ children, activeNav }: AppLayoutProps) {
                   color: '#fff',
                   fontSize: 13,
                   fontWeight: 700,
-                  textDecoration: 'none',
                   border: '1px solid rgba(139,92,246,0.6)',
                   whiteSpace: 'nowrap',
+                  cursor: 'pointer',
                   animation: 'l2-pulse 2s ease-in-out infinite',
                 }}
               >
                 <i className="bi-microscope" style={{ fontSize: 13 }} />
                 <span>L2 Portal</span>
-                <i className="bi-box-arrow-up-right" style={{ fontSize: 10, opacity: 0.8 }} />
-              </a>
+              </button>
             )}
 
             {/* Profile avatar */}

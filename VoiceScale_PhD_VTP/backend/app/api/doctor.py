@@ -44,7 +44,10 @@ async def get_patient_queue(current_user: dict = Depends(require_doctor)):
             "priority":          RISK_PRIORITY.get(risk, "P3"),
             "risk_color":        RISK_COLOR.get(risk, "#8899b8"),
             "created_at":        d["created_at"].isoformat() if isinstance(d.get("created_at"), datetime) else d.get("created_at", ""),
-            "symptoms_positive": sum(1 for v in d.get("symptom_answers", {}).values() if v == "yes"),
+            "symptoms_positive": sum(
+                1 for k, v in d.get("symptom_answers", {}).items()
+                if v in ("yes", True, 1) or (k == "cough_weeks" and isinstance(v, (int, float)) and v > 0)
+            ),
             "l2_referred":       d.get("l2_referred", False),
             # PDF info for queue badge
             "l2_pdf_name":       d.get("l2_pdf_name"),

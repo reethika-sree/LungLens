@@ -64,16 +64,9 @@ export default function XrayPage({ onResult, result }) {
           <div className={styles.sectionTag}>MODULE 01</div>
           <h2 className={styles.title}>Chest X-ray Analysis</h2>
           <p className={styles.subtitle}>
-            Upload a posteroanterior (PA) chest X-ray. Our DenseNet121 model detects
-            TB-associated radiographic patterns with high sensitivity.
+            Upload a posteroanterior (PA) chest X-ray to detect TB-associated
+            radiographic patterns with high sensitivity.
           </p>
-        </div>
-        <div className={styles.modelChip}>
-          <div className={styles.modelChipDot} />
-          <div>
-            <div className={styles.modelChipLabel}>AI Model</div>
-            <div className={styles.modelChipName}>DenseNet121</div>
-          </div>
         </div>
       </div>
 

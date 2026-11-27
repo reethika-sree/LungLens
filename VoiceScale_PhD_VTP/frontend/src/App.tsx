@@ -28,6 +28,7 @@ import { PatientLanguagePage, PatientQuestionsPage, PatientModePage, PatientConf
 import { PatientVoiceCapturePage } from './pages/patient/PatientVoiceCapturePage';
 import PatientDynamicDialoguePage from './pages/patient/PatientDynamicDialoguePage';
 import { PatientPredictionPage } from './pages/patient/PatientPredictionPage';
+import PatientL2DetectionPage from './pages/patient/PatientL2DetectionPage';
 import { PatientChatPage } from './pages/patient/PatientChatPage';
 import { PatientHistoryPage } from './pages/patient/PatientHistoryPage';
 import { PatientProfilePage } from './pages/patient/PatientProfilePage';
@@ -116,6 +117,7 @@ function AppRoutes() {
         <Route path="/patient/dialogue"      element={<PatientDynamicDialoguePage />} />
         <Route path="/patient/questions"     element={<PatientQuestionsPage />} />
         <Route path="/patient/prediction"    element={<PatientPredictionPage />} />
+        <Route path="/patient/l2-detection"  element={<PatientL2DetectionPage />} />
         <Route path="/patient/profile"       element={<PatientProfilePage />} />
         <Route path="/patient/mode"          element={<PatientModePage />} />
         <Route path="/patient/chat"          element={<PatientChatPage />} />

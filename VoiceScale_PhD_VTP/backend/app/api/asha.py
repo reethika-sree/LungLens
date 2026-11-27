@@ -5,9 +5,10 @@ All patients get DOTS activated with realistic randomised data.
 """
 import hashlib
 import random
+import uuid
 from datetime import date, datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.api.auth import require_role, require_any_role
@@ -21,6 +22,13 @@ require_asha_or_admin = require_any_role("asha", "admin")
 class ReminderRequest(BaseModel):
     language: Optional[str] = "English"
     dots_day: Optional[int] = 1
+
+
+class CheckinRequest(BaseModel):
+    taken: Optional[bool] = None
+    note: Optional[str] = ""
+    temperature: Optional[float] = None
+    blood_pressure: Optional[str] = None
 
 
 class VitalsUpdateRequest(BaseModel):
@@ -86,6 +94,11 @@ async def get_asha_patients(current_user: dict = Depends(require_asha)):
         weight  = f"{rng.randint(45, 85)} kg"
         temp    = rng.choice(temps_pool)
 
+        risk_level = (record.get("tb_risk_level") if record else None) or rng.choice(["low", "medium", "high"])
+        risk_score = (record.get("tb_risk_score") if record and record.get("tb_risk_score") is not None else None)
+        if risk_score is None:
+            risk_score = rng.randint(10, 85)
+
         result.append({
             "patient_id":          uid,
             "full_name":           u.get("full_name", "Unknown"),
@@ -93,18 +106,19 @@ async def get_asha_patients(current_user: dict = Depends(require_asha)):
             "sex":                 u.get("sex")    or rng.choice(["M", "F"]),
             "village":             u.get("village") or rng.choice(villages),
             "phone":               u.get("phone", ""),
-            "language":            record.get("language", "") if record else "",
-            "tb_risk_level":       record.get("tb_risk_level") if record else rng.choice(["low", "medium", "high"]),
-            "tb_risk_score":       record.get("tb_risk_score") if record else rng.randint(10, 85),
+            "language":            (record.get("language") if record else None) or u.get("preferred_language") or "English",
+            "tb_risk_level":       risk_level,
+            "tb_risk_score":       risk_score,
             "dots_active":         True,           # all patients active
             "dots_day":            dots_day,
             "dots_month":          dots_month,
             "last_checkin":        last_checkin_raw,
             "adherence_pct":       adherence_pct,
             "today_taken":         today_taken_flag,
+            "checkin_logged_today": bool(checkin),
             "missed_last_7":       missed_last_7,
             "consecutive_missed":  consecutive_missed,
-            "screening_due":       record is None,
+            "screening_due":       record is None or record.get("status") == "pending",
             "health": {
                 "temperature": u.get("temperature", temp),
                 "bp":          u.get("bp",          f"{bps_sys}/{bps_dia} mmHg"),
@@ -128,9 +142,19 @@ async def get_asha_patients(current_user: dict = Depends(require_asha)):
 
 
 @router.post("/asha/checkin/{patient_id}")
-async def dots_checkin(patient_id: str, taken: bool, note: str = "",
-                       current_user: dict = Depends(require_asha)):
-    """Log daily DOTS pill check-in for a patient."""
+async def dots_checkin(
+    patient_id: str,
+    body: Optional[CheckinRequest] = None,
+    taken_q: Optional[bool] = Query(default=None, alias="taken"),
+    note_q: str = Query(default="", alias="note"),
+    current_user: dict = Depends(require_asha),
+):
+    """Log daily DOTS pill check-in (accepts JSON body or query parameters)."""
+    taken = body.taken if (body and body.taken is not None) else taken_q
+    if taken is None:
+        raise HTTPException(status_code=422, detail="Field 'taken' (boolean) is required")
+    note = (body.note if (body and body.note is not None) else note_q) or ""
+
     today_str = date.today().isoformat()
     now = datetime.utcnow()
 
@@ -155,7 +179,24 @@ async def dots_checkin(patient_id: str, taken: bool, note: str = "",
     else:
         update_fields["consecutive_missed"] = 0
 
+    if body and body.temperature is not None:
+        update_fields["temperature"] = f"{body.temperature}°F"
+    if body and body.blood_pressure:
+        bp_val = body.blood_pressure
+        update_fields["bp"] = f"{bp_val} mmHg" if "mmHg" not in bp_val else bp_val
+
     await users_col().update_one({"user_id": patient_id}, {"$set": update_fields})
+
+    await asha_visits_col().insert_one({
+        "visit_id":        str(uuid.uuid4()),
+        "patient_user_id": patient_id,
+        "type":            "DOTS",
+        "date":            today_str,
+        "notes":           note or ("Daily DOTS pill taken." if taken else "Daily DOTS dose missed — follow-up needed."),
+        "status":          "taken" if taken else "missed",
+        "logged_by":       current_user.get("user_id", "asha"),
+        "logged_at":       now,
+    })
 
     return {
         "success":    True,
@@ -169,50 +210,167 @@ async def dots_checkin(patient_id: str, taken: bool, note: str = "",
 
 @router.post("/asha/register")
 async def register_patient(data: dict, current_user: dict = Depends(require_asha)):
-    """Pre-register patient before PHC visit."""
+    """Register a village patient in MongoDB and notify PHC queue."""
+    full_name = (data.get("full_name") or "").strip()
+    if not full_name:
+        raise HTTPException(status_code=422, detail="Patient full_name is required")
+
+    now = datetime.utcnow()
+    today_str = date.today().isoformat()
+    patient_id = str(uuid.uuid4())
+    short_code = patient_id[:4].upper()
+    ticket = f"PRE-{date.today().year}-{short_code}"
+    village = (data.get("village") or "Chittoor Rural").strip()
+    lang = (data.get("preferred_language") or "English").strip() or "English"
+    complaint = (data.get("chief_complaint") or "Presumptive screening").strip()
+
+    temp_val = data.get("temperature")
+    weight_val = data.get("weight")
+    bp_val = data.get("blood_pressure")
+
+    user_doc = {
+        "user_id":            patient_id,
+        "email":              f"village.{short_code.lower()}.{int(now.timestamp())}@lunglens.in",
+        "full_name":          full_name,
+        "role":               "patient",
+        "age":                data.get("age"),
+        "sex":                data.get("sex"),
+        "village":            village,
+        "phone":              data.get("phone", ""),
+        "preferred_language": lang,
+        "dots_active":        True,
+        "dots_day":           1,
+        "dots_month":         1,
+        "adherence_pct":      100,
+        "missed_last_7":      0,
+        "consecutive_missed": 0,
+        "registered_by":      current_user.get("user_id", "asha"),
+        "created_at":         now,
+        "updated_at":         now,
+    }
+    if temp_val is not None:
+        user_doc["temperature"] = f"{temp_val}°F"
+    if weight_val is not None:
+        user_doc["weight"] = f"{weight_val} kg"
+    if bp_val:
+        user_doc["bp"] = f"{bp_val} mmHg" if "mmHg" not in str(bp_val) else str(bp_val)
+
+    await users_col().insert_one(user_doc)
+
+    record_doc = {
+        "record_id":        str(uuid.uuid4()),
+        "user_id":          patient_id,
+        "patient_name":     full_name,
+        "language":         lang,
+        "village":          village,
+        "voice_transcript": complaint,
+        "symptom_answers":  {},
+        "tb_risk_level":    None,
+        "tb_risk_score":    None,
+        "tb_confidence":    None,
+        "tb_explanation":   [],
+        "ticket":           ticket,
+        "status":           "pending",
+        "registered_by":    current_user.get("user_id", "asha"),
+        "created_at":       now,
+        "updated_at":       now,
+    }
+    await patient_records_col().insert_one(record_doc)
+
+    await asha_visits_col().insert_one({
+        "visit_id":        str(uuid.uuid4()),
+        "patient_user_id": patient_id,
+        "type":            "REGISTRATION",
+        "date":            today_str,
+        "notes":           f"Registered in {village} — {complaint} (Ticket: {ticket})",
+        "weight":          user_doc.get("weight"),
+        "status":          "completed",
+        "logged_by":       current_user.get("user_id", "asha"),
+        "logged_at":       now,
+    })
+
     return {
         "success":    True,
-        "patient_id": "p_new_001",
-        "message":    "Patient registered successfully. PHC notified.",
-        "ticket":     "PRE-2026-0001",
+        "patient_id": patient_id,
+        "message":    f"{full_name} registered successfully. PHC notified.",
+        "ticket":     ticket,
     }
+
+
+def _format_visits(raw_visits: list, raw_checkins: list, user_map: dict) -> list:
+    """Merge and normalize ASHA visit logs and DOTS check-in records for the UI."""
+    visits = []
+    seen_dots_keys = set()
+
+    for idx, v in enumerate(raw_visits):
+        pid = v.get("patient_user_id", "")
+        vtype = v.get("type", "DOTS")
+        vdate = v.get("date", "")
+        if vtype == "DOTS":
+            seen_dots_keys.add((pid, vdate))
+        note_text = v.get("notes") or v.get("note") or ""
+        visits.append({
+            "id":         v.get("visit_id") or str(v.get("_id") or f"v-{idx}-{pid}"),
+            "patient_id": pid,
+            "patient":    user_map.get(pid, "Village Patient"),
+            "date":       vdate,
+            "type":       vtype,
+            "notes":      note_text,
+            "note":       note_text,
+            "weight":     v.get("weight"),
+            "status":     v.get("status", "completed"),
+        })
+
+    for idx, c in enumerate(raw_checkins):
+        pid = c.get("patient_user_id", "")
+        cdate = c.get("date", "")
+        if (pid, cdate) in seen_dots_keys:
+            continue
+        taken = bool(c.get("taken"))
+        note_text = c.get("note") or ("Pill taken." if taken else "Missed dose.")
+        visits.append({
+            "id":         str(c.get("_id") or f"dc-{idx}-{pid}"),
+            "patient_id": pid,
+            "patient":    user_map.get(pid, "Village Patient"),
+            "date":       cdate,
+            "type":       "DOTS",
+            "notes":      note_text,
+            "note":       note_text,
+            "weight":     None,
+            "status":     "taken" if taken else "missed",
+        })
+
+    visits.sort(key=lambda x: x.get("date", ""), reverse=True)
+    return visits
+
+
+@router.get("/asha/visits")
+async def get_all_asha_visits(current_user: dict = Depends(require_asha)):
+    """Get recent ASHA home visits and DOTS check-ins across all patients."""
+    patient_users = await users_col().find({"role": "patient"}).to_list(length=200)
+    user_map = {
+        (u.get("user_id") or str(u["_id"])): u.get("full_name", "Unknown")
+        for u in patient_users
+    }
+    raw_visits = await asha_visits_col().find({}, sort=[("logged_at", -1)]).to_list(length=100)
+    raw_checkins = await dots_checkins_col().find({}, sort=[("date", -1)]).to_list(length=100)
+    return {"visits": _format_visits(raw_visits, raw_checkins, user_map)}
 
 
 @router.get("/asha/visits/{patient_id}")
 async def get_patient_visits(patient_id: str, current_user: dict = Depends(require_asha)):
     """Get visit log for a specific patient from DB."""
-    visits_cursor = asha_visits_col().find(
+    user = await users_col().find_one({"user_id": patient_id})
+    user_map = {patient_id: user.get("full_name", "Village Patient")} if user else {}
+    raw_visits = await asha_visits_col().find(
         {"patient_user_id": patient_id},
         sort=[("date", -1)],
-    )
-    visits_raw = await visits_cursor.to_list(length=50)
-
-    visits = []
-    for v in visits_raw:
-        visits.append({
-            "date":   v.get("date", ""),
-            "type":   v.get("type", "DOTS"),
-            "notes":  v.get("notes", ""),
-            "weight": v.get("weight"),
-            "status": v.get("status", "completed"),
-        })
-
-    if not visits:
-        checkins = await dots_checkins_col().find(
-            {"patient_user_id": patient_id},
-            sort=[("date", -1)],
-        ).to_list(length=30)
-
-        for c in checkins:
-            visits.append({
-                "date":   c.get("date", ""),
-                "type":   "DOTS",
-                "notes":  c.get("note", "Pill taken." if c.get("taken") else "Missed."),
-                "weight": None,
-                "status": "completed" if c.get("taken") else "missed",
-            })
-
-    return {"visits": visits}
+    ).to_list(length=50)
+    raw_checkins = await dots_checkins_col().find(
+        {"patient_user_id": patient_id},
+        sort=[("date", -1)],
+    ).to_list(length=30)
+    return {"visits": _format_visits(raw_visits, raw_checkins, user_map)}
 
 
 @router.post("/asha/reminder/{patient_id}")

@@ -4,7 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useToast } from '../../components/ToastProvider';
 import { useAuth } from '../../contexts/AuthContext';
 import RoleLayout from '../../layouts/RoleLayout';
-import { patientApi, authApi, L2_FRONTEND_URL } from '../../api/client';
+import { patientApi, authApi } from '../../api/client';
 
 interface PatientProfile {
   patient_id: string;
@@ -270,12 +270,11 @@ export function PatientProfilePage() {
                     </div>
                   )}
 
-                  {/* CTA — opens L2 TB Detection frontend */}
+                  {/* CTA — opens L2 TB Detection directly inside LungLens Patient Portal */}
                   <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <a
-                      href={L2_FRONTEND_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => navigate('/patient/l2-detection')}
                       className="vc-btn"
                       style={{
                         background: '#8b5cf6',
@@ -285,16 +284,15 @@ export function PatientProfilePage() {
                         borderRadius: 8,
                         fontSize: 13,
                         fontWeight: 600,
-                        textDecoration: 'none',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 8,
                         cursor: 'pointer',
                       }}
                     >
-                      <i className="bi-box-arrow-up-right" />
+                      <i className="bi-microscope" />
                       Open L2 TB Detection
-                    </a>
+                    </button>
                     <div
                       style={{
                         display: 'flex',
@@ -305,7 +303,7 @@ export function PatientProfilePage() {
                       }}
                     >
                       <i className="bi-info-circle" />
-                      Opens in a new tab &mdash; complete all 3 test modules (X-ray, Blood, Lab)
+                      Complete all 3 diagnostic modules (X-ray, Blood, Lab) directly inside Patient Portal
                     </div>
                   </div>
                 </div>
@@ -419,7 +417,7 @@ export function PatientProfilePage() {
                           transition: 'border-color 0.15s',
                         }}
                         onClick={() => {
-                          if (record.l2_referred) window.open(L2_FRONTEND_URL, '_blank');
+                          if (record.l2_referred) navigate('/patient/l2-detection');
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

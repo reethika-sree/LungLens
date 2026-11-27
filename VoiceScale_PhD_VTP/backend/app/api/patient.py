@@ -115,6 +115,7 @@ class SymptomAnswers(BaseModel):
 class TBPredictionRequest(BaseModel):
     record_id:   str
     risk:        str
+    priority:    Optional[str] = None
     confidence:  float
     risk_score:  int
     explanation: list[str]
@@ -220,6 +221,7 @@ async def save_tb_prediction(
 ):
     """Step 3 — save ML prediction result."""
     priority_map = {"high": "P1", "medium": "P2", "low": "P3"}
+    priority = body.priority or priority_map.get(body.risk, "P3")
     await patient_records_col().update_one(
         {"record_id": body.record_id, "user_id": current_user["user_id"]},
         {"$set": {
@@ -227,7 +229,7 @@ async def save_tb_prediction(
             "tb_risk_score":  body.risk_score,
             "tb_confidence":  body.confidence,
             "tb_explanation": body.explanation,
-            "priority":       priority_map.get(body.risk, "P3"),
+            "priority":       priority,
             "status":         "prediction_complete",
             "updated_at":     datetime.utcnow(),
         }},
@@ -249,12 +251,12 @@ async def run_tb_prediction_ml(
     # Compute risk score with XGBoost model
     risk_pct, priority = compute_risk_score(symptoms)
 
-    # Map probability to risk tier
+    # Map priority consistently to UI risk colors / tiers
     if priority == "P1":
         risk_level = "high"
         confidence = 0.94
     elif priority == "P2":
-        risk_level = "high"
+        risk_level = "medium"
         confidence = 0.88
     elif priority == "P3":
         risk_level = "medium"
@@ -277,10 +279,9 @@ async def run_tb_prediction_ml(
         "symptoms_evaluated": symptoms,
     }
 
-    # If record_id is given or user logged in, persist prediction
+    # If record_id is given or user logged in, persist prediction (insert if not yet created)
     rec_id = body.record_id
     if not rec_id and current_user:
-        # Find latest pending record
         rec = await patient_records_col().find_one(
             {"user_id": current_user["user_id"], "status": {"$in": ["voice_captured", "pending"]}},
             sort=[("created_at", -1)],
@@ -288,27 +289,41 @@ async def run_tb_prediction_ml(
         if rec:
             rec_id = rec["record_id"]
 
+    update_query = {
+        "symptom_answers": symptoms,
+        "tb_risk_level": risk_level,
+        "tb_risk_score": int(round(risk_pct)),
+        "tb_confidence": confidence,
+        "tb_explanation": contributing_factors,
+        "priority": priority,
+        "status": "prediction_complete",
+        "updated_at": datetime.utcnow(),
+    }
+
+    existing_rec = None
     if rec_id:
-        update_query = {
-            "tb_risk_level": risk_level,
-            "tb_risk_score": int(round(risk_pct)),
-            "tb_confidence": confidence,
-            "tb_explanation": contributing_factors,
-            "priority": priority,
-            "status": "prediction_complete",
-            "updated_at": datetime.utcnow(),
-        }
-        if current_user:
-            await patient_records_col().update_one(
-                {"record_id": rec_id, "user_id": current_user["user_id"]},
-                {"$set": update_query},
-            )
-        else:
-            await patient_records_col().update_one(
-                {"record_id": rec_id},
-                {"$set": update_query},
-            )
+        q = {"record_id": rec_id, "user_id": current_user["user_id"]} if current_user else {"record_id": rec_id}
+        existing_rec = await patient_records_col().find_one(q)
+
+    if existing_rec:
+        await patient_records_col().update_one(
+            {"record_id": rec_id},
+            {"$set": update_query},
+        )
         response_data["record_id"] = rec_id
+    elif current_user:
+        new_rec_id = str(uuid.uuid4())
+        doc = {
+            "record_id":        new_rec_id,
+            "user_id":          current_user["user_id"],
+            "patient_name":     current_user.get("full_name", "Patient"),
+            "language":         body.language or "English",
+            "voice_transcript": "",
+            "created_at":       datetime.utcnow(),
+            **update_query,
+        }
+        await patient_records_col().insert_one(doc)
+        response_data["record_id"] = new_rec_id
 
     return response_data
 
@@ -355,7 +370,7 @@ async def start_dynamic_dialogue(body: DialogueStartRequest):
         "symptoms": detected_symptoms,
         "asked_targets": asked_targets,
         "current_target": target_key,
-        "rounds": 1,
+        "rounds": 0,
         "done": is_done,
         "record_id": body.record_id,
     }
@@ -387,16 +402,73 @@ async def step_dynamic_dialogue(body: DialogueStepRequest):
     rounds = state.get("rounds", 1) + 1
 
     # 1. Interpret direct response to the specific current_target
+    direct_clear = False
     if current_target:
         val, is_clear = parse_direct_answer(msg, current_target, lang)
         if is_clear and val is not None:
             symptoms[current_target] = val
+            direct_clear = True
 
     # 2. Also extract any additional symptoms mentioned in free-text message
-    symptoms = extract_symptoms_from_speech(msg, symptoms, lang)
+    prev_snapshot = dict(symptoms)
+    if direct_clear:
+        # Preserve already-confirmed earlier symptoms (e.g. "No (Dry Cough)" must not clobber cough_weeks)
+        extra = extract_symptoms_from_speech(msg, {}, lang)
+        extracted_changed = False
+        for k, v in extra.items():
+            if k not in symptoms and k != current_target and v is not None:
+                symptoms[k] = v
+                extracted_changed = True
+    else:
+        symptoms = extract_symptoms_from_speech(msg, symptoms, lang)
+        extracted_changed = (symptoms != prev_snapshot)
+
+    if current_target == "cough_weeks" and symptoms.get("cough_weeks") == 0 and "cough_phlegm" not in symptoms:
+        symptoms["cough_phlegm"] = False
+
+    # If answer could not be interpreted for the active question, clarify cleanly instead of looping silently
+    if current_target and not direct_clear and not extracted_changed:
+        # Find active question prompt cleanly
+        q_spec = next((v for v in DYNAMIC_QUESTION_BANK.values() if v["target"] == current_target), None)
+        if q_spec and current_target == "cough_weeks" and prev_snapshot.get("cough_weeks") is None:
+            repeat_q = {
+                "English": "Do you have a cough? If yes, for how long? (e.g. 'No', '2 weeks', '1 month', 'several days')",
+                "Telugu": "మీకు దగ్గు ఉందా? ఉంటే ఎంత కాలం నుండి ఉంది? (ఉదా: 'లేదు', '2 వారాలు', '1 నెల')",
+                "Hindi": "क्या आपको खांसी है? यदि हाँ, तो कितने समय से? (जैसे 'नहीं', '2 हफ्ते', '1 महीना')",
+            }.get(lang, q_spec["questions"]["English"])
+        else:
+            repeat_q = q_spec["questions"].get(lang, q_spec["questions"]["English"]) if q_spec else "Please clarify your symptom."
+
+        clarify_prefix = {
+            "English": "I didn't catch that clearly — please choose an option below or specify (e.g. Yes / No / 2 weeks). ",
+            "Telugu": "క్షమించండి, నాకు స్పష్టంగా అర్థం కాలేదు — దయచేసి కింది ఆప్షన్లలో ఒకటి ఎంచుకోండి లేదా 'అవును' / 'లేదు' / వారాలు చెప్పండి. ",
+            "Hindi": "क्षमा करें, मुझे स्पष्ट समझ नहीं आया — कृपया नीचे दिए विकल्पों में से चुनें या 'हाँ' / 'नहीं' / हफ्ते बताएं। ",
+        }.get(lang, "Please clarify using the options below. ")
+
+        reply_text = clarify_prefix + repeat_q
+        updated_state = {
+            "session_id": state.get("session_id", str(uuid.uuid4())),
+            "language": lang,
+            "symptoms": symptoms,
+            "asked_targets": asked_targets,
+            "current_target": current_target,
+            "rounds": state.get("rounds", 1),
+            "done": False,
+            "record_id": body.record_id or state.get("record_id"),
+        }
+        return {
+            "session_id": updated_state["session_id"],
+            "reply": reply_text,
+            "reply_local": reply_text,
+            "target_symptom": current_target,
+            "symptoms": symptoms,
+            "state": updated_state,
+            "done": False,
+            "reprompt": True,
+        }
 
     # 3. Check termination conditions
-    is_done = DynamicDialogueManager.should_terminate(symptoms, rounds)
+    is_done = DynamicDialogueManager.should_terminate(symptoms, rounds, asked_targets)
     next_q = None if is_done else DynamicDialogueManager.select_next_question(symptoms, asked_targets, lang)
 
     if is_done or not next_q:
@@ -548,14 +620,46 @@ async def upload_l2_pdf(
     except Exception:
         raise HTTPException(400, "Invalid base64 PDF data")
 
-    # Find the record that was referred to L2
+    # Find the record that was referred to L2, or fall back to the patient's latest record
     record = await patient_records_col().find_one(
         {"user_id": current_user["user_id"], "l2_referred": True},
         sort=[("created_at", -1)],
     )
+    if not record:
+        record = await patient_records_col().find_one(
+            {"user_id": current_user["user_id"]},
+            sort=[("created_at", -1)],
+        )
 
     if not record:
-        raise HTTPException(404, "No L2 referral found for this patient")
+        new_rec_id = str(uuid.uuid4())
+        await patient_records_col().insert_one({
+            "record_id":          new_rec_id,
+            "user_id":            current_user["user_id"],
+            "patient_name":       current_user.get("full_name", "Patient"),
+            "language":           "English",
+            "voice_transcript":   "",
+            "symptom_answers":    {},
+            "tb_risk_level":      None,
+            "tb_risk_score":      None,
+            "tb_confidence":      None,
+            "tb_explanation":     [],
+            "status":             "l2_complete",
+            "l2_referred":        True,
+            "l2_pdf_data":        body.pdf_data,
+            "l2_pdf_name":        body.pdf_name,
+            "l2_pdf_uploaded_at": datetime.utcnow(),
+            "l2_pdf_size_kb":     round(len(pdf_bytes) / 1024, 1),
+            "created_at":         datetime.utcnow(),
+            "updated_at":         datetime.utcnow(),
+        })
+        return {
+            "success":     True,
+            "record_id":   new_rec_id,
+            "pdf_name":    body.pdf_name,
+            "size_kb":     round(len(pdf_bytes) / 1024, 1),
+            "uploaded_at": datetime.utcnow().isoformat(),
+        }
 
     await patient_records_col().update_one(
         {"record_id": record["record_id"]},

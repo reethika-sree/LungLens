@@ -11,27 +11,31 @@ export default function AshaDashboardPage() {
 
   const [patients, setPatients] = useState<AshaPatient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const loadAshaData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await ashaApi.getPatients();
+      const raw = res.data as any;
+      const list = Array.isArray(raw) ? raw : (raw?.patients || []);
+      setPatients(list);
+    } catch (err: any) {
+      console.error('Failed to load ASHA dashboard data', err);
+      setErrorMsg(err?.response?.data?.detail || 'Could not load ASHA patient list.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    const loadAshaData = async () => {
-      try {
-        const res = await ashaApi.getPatients();
-        if (mounted) setPatients(res.data || []);
-      } catch (err) {
-        console.error('Failed to load ASHA dashboard data', err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
     loadAshaData();
-    return () => { mounted = false; };
   }, []);
 
   const totalPatients = patients.length;
   const takenToday = patients.filter(p => p.today_taken).length;
-  const adherenceRate = totalPatients > 0 ? Math.round((takenToday / totalPatients) * 100) : 85;
+  const adherenceRate = totalPatients > 0 ? Math.round((takenToday / totalPatients) * 100) : 0;
   const missedDoses = patients.filter(p => p.consecutive_missed > 0).length;
   const highRisk = patients.filter(p => p.tb_risk_level === 'high').length;
 
@@ -217,6 +221,17 @@ export default function AshaDashboardPage() {
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text4)' }}>
               Loading patient data…
             </div>
+          ) : errorMsg ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--red)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div><i className="bi-exclamation-triangle-fill" /> {errorMsg}</div>
+              <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={loadAshaData}>
+                <i className="bi-arrow-clockwise" /> Retry
+              </button>
+            </div>
+          ) : patients.length === 0 ? (
+            <div style={{ padding: '28px', textAlign: 'center', color: 'var(--text4)' }}>
+              No assigned village patients yet. Click <strong>Register Patient</strong> to enroll your first case.
+            </div>
           ) : (
             <table className="dash-table">
               <thead>
@@ -259,7 +274,7 @@ export default function AshaDashboardPage() {
                     <td>
                       <button
                         className="vc-btn vc-btn-teal vc-btn-sm"
-                        onClick={() => navigate('/asha/checkin')}
+                        onClick={() => navigate(`/asha/checkin?id=${p.patient_id}`)}
                       >
                         Log Dose
                       </button>

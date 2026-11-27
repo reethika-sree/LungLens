@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RoleLayout from '../../layouts/RoleLayout';
 import { useToast } from '../../components/ToastProvider';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { setPrediction as setReduxPrediction, resetTriage } from '../../store/slices/triageSlice';
 import { nlpApi, patientApi } from '../../api/client';
 
 interface PredictionResult {
@@ -23,7 +25,7 @@ const RISK_COLORS: Record<string, { fg: string; bg: string; border: string }> = 
 
 const PRIORITY_LABELS: Record<string, string> = {
   P1: 'Critical Priority — Immediate PHC Consultation Recommended',
-  P2: 'Moderate Priority — Clinical Sputum / X-ray Follow-up Advised',
+  P2: 'High / Moderate Priority — Clinical Sputum / X-ray Within 48h',
   P3: 'Low Priority — Routine Symptom Monitoring & Health Advisory',
   P4: 'Minimal / Routine — General Health Precautions',
 };
@@ -32,33 +34,79 @@ export function PatientPredictionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
+  const dispatch = useAppDispatch();
+  const reduxSymptoms = useAppSelector(s => s.triage.symptoms);
 
   const [loading, setLoading] = useState(true);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
+  const [noSymptomsYet, setNoSymptomsYet] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const ranRef = useRef(false);
 
   useEffect(() => {
-    let symptoms: Record<string, any> = (location.state as any)?.symptoms;
-    const language: string = (location.state as any)?.language || sessionStorage.getItem('selectedLanguage') || 'Telugu';
-    let recordId: string = (location.state as any)?.recordId || sessionStorage.getItem('record_id') || ('REC-' + Date.now());
+    if (ranRef.current) return;
+    ranRef.current = true;
 
-    if (!symptoms) {
-      const stored = sessionStorage.getItem('dialogueSymptoms') || sessionStorage.getItem('questionAnswers');
+    let symptoms: Record<string, any> | undefined = (location.state as any)?.symptoms;
+    const language: string = (location.state as any)?.language || sessionStorage.getItem('selectedLanguage') || 'English';
+    const recordId: string | undefined = (location.state as any)?.recordId || sessionStorage.getItem('record_id') || undefined;
+
+    if (!symptoms || Object.keys(symptoms).length === 0) {
+      const stored =
+        sessionStorage.getItem('dialogueSymptoms') ||
+        sessionStorage.getItem('extractedSymptoms') ||
+        sessionStorage.getItem('questionAnswers');
       if (stored) {
         try { symptoms = JSON.parse(stored); } catch { /* ignore */ }
       }
     }
 
-    if (!symptoms || Object.keys(symptoms).length === 0) {
-      // If no symptoms found at all, navigate back to dialogue
-      navigate('/patient/dialogue');
+    if ((!symptoms || Object.keys(symptoms).length === 0) && reduxSymptoms && Object.keys(reduxSymptoms).length > 0) {
+      symptoms = reduxSymptoms;
+    }
+
+    if (symptoms && Object.keys(symptoms).length > 0) {
+      executePrediction(recordId, symptoms, language);
       return;
     }
 
-    executePrediction(recordId, symptoms, language);
-  }, []);
+    // No symptoms in current session — check latest saved assessment or show clear prompt
+    loadLatestOrPrompt();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const executePrediction = async (recordId: string, symptoms: Record<string, any>, language: string) => {
+  const loadLatestOrPrompt = async () => {
+    setLoading(true);
+    try {
+      const savedPred = sessionStorage.getItem('tbPrediction');
+      if (savedPred) {
+        setPrediction(JSON.parse(savedPred));
+        setLoading(false);
+        return;
+      }
+      const res = await patientApi.getMyRecords();
+      const latest = (res.data || []).find((r: any) => r.status === 'prediction_complete');
+      if (latest) {
+        setPrediction({
+          record_id: latest.record_id,
+          risk_score: Number(latest.tb_risk_score ?? 0),
+          risk_level: (latest.tb_risk_level || 'low').toLowerCase(),
+          priority: latest.priority || 'P4',
+          confidence: Number(latest.tb_confidence ?? 0.85),
+          contributing_factors: latest.tb_explanation || [],
+          explanation: latest.tb_explanation || [],
+          disclaimer: 'This TB Risk Assessment is an AI-assisted screening tool and NOT a confirmed medical diagnosis. Patients showing concerning symptoms must consult a registered medical practitioner.',
+        });
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // fall through to clean empty state
+    }
+    setNoSymptomsYet(true);
+    setLoading(false);
+  };
+
+  const executePrediction = async (recordId: string | undefined, symptoms: Record<string, any>, language: string) => {
     setLoading(true);
     try {
       const res = await nlpApi.predictTB({
@@ -68,11 +116,14 @@ export function PatientPredictionPage() {
       });
 
       const data: any = res.data;
+      const finalRecordId = data.record_id || recordId;
+      if (finalRecordId) sessionStorage.setItem('record_id', finalRecordId);
+
       const pred: PredictionResult = {
-        record_id: data.record_id || recordId,
+        record_id: finalRecordId,
         risk_score: data.risk_score ?? Math.round((data.tb_probability || 0) * 100),
         risk_level: (data.risk || data.risk_level || 'low').toLowerCase() as any,
-        priority: (data.priority as any) || 'P3',
+        priority: (data.priority as any) || 'P4',
         confidence: data.confidence ?? 0.85,
         contributing_factors: data.contributing_factors || data.explanation || [],
         explanation: data.explanation || [],
@@ -81,37 +132,29 @@ export function PatientPredictionPage() {
 
       setPrediction(pred);
       sessionStorage.setItem('tbPrediction', JSON.stringify(pred));
-
-      // Attempt to save to patient record if API supports it
-      try {
-        await patientApi.saveTBPrediction({
-          record_id: recordId,
-          risk: pred.risk_level,
-          priority: pred.priority,
-          confidence: pred.confidence,
-          risk_score: pred.risk_score,
-          explanation: pred.contributing_factors,
-        });
-      } catch {
-        // non-blocking
-      }
+      dispatch(setReduxPrediction({
+        riskScore: pred.risk_score,
+        priorityTier: pred.priority,
+        consultationId: pred.record_id,
+      }));
     } catch (err: any) {
       console.error('Prediction failed, using fallback assessment:', err);
-      // Fallback in case of network issue
-      const coughWeeks = Number(symptoms.cough_weeks || 0);
-      const isHigh = coughWeeks >= 2 || symptoms.hemoptysis === 1 || (symptoms.night_fever === 1 && symptoms.weight_loss === 1);
-      const isMed = coughWeeks > 0 || symptoms.night_fever === 1 || symptoms.weight_loss === 1 || symptoms.chest_pain === 1;
+      const cwRaw = symptoms.cough_weeks;
+      const coughWeeks = cwRaw === 'mentioned_unknown_duration' ? 1.5 : Number(cwRaw || 0);
+      const has = (k: string) => symptoms[k] === true || symptoms[k] === 1 || symptoms[k] === 'yes';
+      const isHigh = coughWeeks >= 2 || has('hemoptysis') || (has('night_fever') && has('weight_loss'));
+      const isMed = coughWeeks > 0 || has('night_fever') || has('weight_loss') || has('chest_pain');
 
       const fallbackPred: PredictionResult = {
-        risk_score: isHigh ? 78 : isMed ? 45 : 18,
+        risk_score: isHigh ? 78 : isMed ? 45 : 12,
         risk_level: isHigh ? 'high' : isMed ? 'medium' : 'low',
-        priority: isHigh ? 'P1' : isMed ? 'P2' : 'P3',
+        priority: isHigh ? 'P1' : isMed ? 'P2' : 'P4',
         confidence: 0.82,
         contributing_factors: [
           coughWeeks > 0 ? `Cough duration: ${coughWeeks} week(s)` : 'No persistent cough',
-          symptoms.hemoptysis === 1 ? 'Blood in sputum / Hemoptysis reported' : 'No hemoptysis',
-          symptoms.night_fever === 1 ? 'Night fever reported' : 'No nocturnal fever',
-          symptoms.weight_loss === 1 ? 'Unexplained weight loss reported' : 'No significant weight loss'
+          has('hemoptysis') ? 'Blood in sputum / Hemoptysis reported' : 'No hemoptysis',
+          has('night_fever') ? 'Night fever reported' : 'No nocturnal fever',
+          has('weight_loss') ? 'Unexplained weight loss reported' : 'No significant weight loss'
         ],
         explanation: [],
         disclaimer: 'This TB Risk Assessment is an AI-assisted screening tool and NOT a confirmed medical diagnosis. Patients showing concerning symptoms must consult a registered medical practitioner and undergo confirmatory clinical testing.'
@@ -127,19 +170,24 @@ export function PatientPredictionPage() {
     showToast('Your screening summary has been transmitted to the PHC medical queue.', 'var(--teal)', 'bi-check-circle-fill');
     setTimeout(() => {
       navigate('/patient/dashboard');
-    }, 1200);
+    }, 1000);
   };
 
   const handleRetest = () => {
     sessionStorage.removeItem('dialogueSymptoms');
+    sessionStorage.removeItem('extractedSymptoms');
+    sessionStorage.removeItem('dialogueSession');
     sessionStorage.removeItem('questionAnswers');
     sessionStorage.removeItem('voiceCaptureText');
+    sessionStorage.removeItem('tbPrediction');
+    sessionStorage.removeItem('record_id');
+    dispatch(resetTriage());
     navigate('/patient/language');
   };
 
   if (loading) {
     return (
-      <RoleLayout activeNav="history" pageTitle="Analyzing Symptoms">
+      <RoleLayout activeNav="prediction" pageTitle="Analyzing Symptoms">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 20 }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', border: '4px solid var(--teal)', borderTopColor: 'transparent', animation: 'spin 0.9s linear infinite' }} />
           <div style={{ textAlign: 'center' }}>
@@ -152,16 +200,23 @@ export function PatientPredictionPage() {
     );
   }
 
-  if (!prediction) {
+  if (noSymptomsYet || !prediction) {
     return (
-      <RoleLayout activeNav="history" pageTitle="Assessment Error">
-        <div style={{ textAlign: 'center', padding: '60px 20px', maxWidth: 480, margin: '0 auto' }}>
-          <i className="bi-exclamation-triangle" style={{ fontSize: 48, color: 'var(--red)', marginBottom: 16, display: 'inline-block' }} />
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text1)', marginBottom: 8 }}>Unable to Compute Assessment</h2>
-          <p style={{ fontSize: 14, color: 'var(--text3)', marginBottom: 24 }}>We could not process symptom data. Please restart the voice check-in.</p>
-          <button className="vc-btn vc-btn-teal" onClick={handleRetest}>
-            <i className="bi-arrow-clockwise" /> Restart Check-in
-          </button>
+      <RoleLayout activeNav="prediction" pageTitle="TB Risk Assessment">
+        <div style={{ textAlign: 'center', padding: '60px 20px', maxWidth: 520, margin: '0 auto' }}>
+          <i className="bi-chat-dots-fill" style={{ fontSize: 48, color: 'var(--teal)', marginBottom: 16, display: 'inline-block' }} />
+          <h2 style={{ fontSize: 21, fontWeight: 700, color: 'var(--text1)', marginBottom: 8 }}>Complete Symptom Intake First</h2>
+          <p style={{ fontSize: 14, color: 'var(--text3)', marginBottom: 24, lineHeight: 1.6 }}>
+            We need your reported symptoms before running the XGBoost TB triage model. Answer a few quick questions in Dynamic AI Intake or record your symptoms via Voice Screening.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="vc-btn vc-btn-teal" onClick={() => navigate('/patient/dialogue')}>
+              <i className="bi-chat-dots" /> Open Dynamic AI Intake
+            </button>
+            <button className="vc-btn vc-btn-ghost" onClick={handleRetest}>
+              <i className="bi-mic" /> Start Voice Screening
+            </button>
+          </div>
         </div>
       </RoleLayout>
     );
@@ -170,9 +225,10 @@ export function PatientPredictionPage() {
   const colors = RISK_COLORS[prediction.risk_level] || RISK_COLORS.low;
   const circumference = 2 * Math.PI * 52;
   const dashOffset = circumference - (prediction.risk_score / 100) * circumference;
+  const confPct = prediction.confidence <= 1 ? Math.round(prediction.confidence * 100) : Math.round(prediction.confidence);
 
   return (
-    <RoleLayout activeNav="history" pageTitle="TB Risk Assessment Result">
+    <RoleLayout activeNav="prediction" pageTitle="TB Risk Assessment Result">
       <div style={{ maxWidth: 840, margin: '0 auto', padding: '16px 16px 40px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* ── Title Banner ── */}
@@ -224,7 +280,7 @@ export function PatientPredictionPage() {
               </text>
             </svg>
             <span style={{ fontSize: 12, color: 'var(--text4)', fontFamily: 'var(--mono)', fontWeight: 600 }}>
-              Model Confidence: {Math.round(prediction.confidence * 100)}%
+              Model Confidence: {confPct}%
             </span>
           </div>
 

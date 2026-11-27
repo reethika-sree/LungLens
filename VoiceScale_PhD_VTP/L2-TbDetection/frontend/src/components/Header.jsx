@@ -8,13 +8,7 @@ export default function Header() {
           <div className={styles.logoInner} />
         </div>
         <div className={styles.brandText}>
-          <span className={styles.brandName}>Voice<span className={styles.accent}>Care</span> PHC</span>
-        </div>
-      </div>
-      <div className={styles.right}>
-        <div className={styles.statusBadge}>
-          <span className={styles.statusDot} />
-          System Online
+          <span className={styles.brandName}>Lung<span className={styles.accent}>Lens</span></span>
         </div>
       </div>
     </header>

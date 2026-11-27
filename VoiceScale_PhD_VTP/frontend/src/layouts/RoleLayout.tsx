@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggleBtn } from '../contexts/ThemeContext';
-import { patientApi, L2_FRONTEND_URL } from '../api/client';
+import { patientApi } from '../api/client';
 import './RoleLayout.css';
 
 interface NavItem {
@@ -22,7 +22,8 @@ const ROLE_NAV: Record<string, { section: string; items: NavItem[] }[]> = {
         { key: 'screening', label: 'Voice NLP Screening', path: '/patient/language', icon: 'bi-mic-fill' },
         { key: 'dialogue',  label: 'Dynamic AI Intake',  path: '/patient/dialogue', icon: 'bi-chat-dots-fill' },
         { key: 'prediction', label: 'TB Risk Assessment', path: '/patient/prediction', icon: 'bi-cpu-fill' },
-        { key: 'history',   label: 'Consultation Records', path: '/patient/history', icon: 'bi-folder2-open' },
+        { key: 'l2lab',      label: 'L2 TB Detection',    path: '/patient/l2-detection', icon: 'bi-microscope' },
+        { key: 'history',    label: 'Consultation Records', path: '/patient/history', icon: 'bi-folder2-open' },
         { key: 'profile',   label: 'Health Profile',     path: '/patient/profile', icon: 'bi-person-badge-fill' },
       ]
     }
@@ -216,10 +217,9 @@ export default function RoleLayout({ children, activeNav, pageTitle }: RoleLayou
 
           <div className="rl-topbar-right">
             {role === 'patient' && l2Referred && (
-              <a
-                href={L2_FRONTEND_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => navigate('/patient/l2-detection')}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -230,13 +230,13 @@ export default function RoleLayout({ children, activeNav, pageTitle }: RoleLayou
                   color: '#fff',
                   fontSize: 12,
                   fontWeight: 600,
-                  textDecoration: 'none'
+                  border: 'none',
+                  cursor: 'pointer'
                 }}
               >
                 <i className="bi-microscope" />
                 <span>L2 Referral Lab</span>
-                <i className="bi-box-arrow-up-right" style={{ fontSize: 10, opacity: 0.8 }} />
-              </a>
+              </button>
             )}
 
             <ThemeToggleBtn />

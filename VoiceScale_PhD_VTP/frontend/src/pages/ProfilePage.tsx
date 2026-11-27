@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggleBtn } from '../contexts/ThemeContext';
-import { patientApi, doctorApi, ashaApi, adminApi, L2_FRONTEND_URL } from '../api/client';
+import { patientApi, doctorApi, ashaApi, adminApi } from '../api/client';
 import { useToast } from '../components/ToastProvider';
 import './ProfilePage.css';
 
@@ -66,7 +66,10 @@ export default function ProfilePage() {
 
     if (user.role === 'asha') {
       ashaApi.getPatients()
-        .then(res => setAshaPatients((res.data as any[]) || []))
+        .then(res => {
+          const raw = res.data as any;
+          setAshaPatients(Array.isArray(raw) ? raw : (raw?.patients || []));
+        })
         .catch(() => showToast('Could not load ASHA data', 'var(--red)', 'bi-exclamation-triangle'))
         .finally(() => setLoading(false));
     }
@@ -225,18 +228,17 @@ export default function ProfilePage() {
 
               {/* Action buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-                <a
-                  href={L2_FRONTEND_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => navigate('/patient/l2-detection')}
                   className="btn btn-primary"
                   style={{
                     background: '#8b5cf6', borderColor: '#8b5cf6',
-                    textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}
                 >
-                  <i className="bi-box-arrow-up-right" /> Open L2 Detection
-                </a>
+                  <i className="bi-microscope" /> Open L2 Detection
+                </button>
                 <button
                   className="btn"
                   onClick={handleUploadPDF}
@@ -481,7 +483,7 @@ export default function ProfilePage() {
           </div>
           <div className="profile-actions">
             <button className="btn btn-primary" onClick={() => navigate('/asha/patients')}>View Patients</button>
-            <button className="btn" onClick={() => navigate('/asha/dots')}>DOTS Management</button>
+            <button className="btn" onClick={() => navigate('/asha/checkin')}>DOTS Management</button>
           </div>
         </div>
 

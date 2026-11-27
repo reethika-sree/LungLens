@@ -134,7 +134,7 @@ export default function PatientDashboardPage() {
           </div>
 
           {/* Card 4: Diagnostic Referral */}
-          <div className="dash-kpi-card">
+          <div className="dash-kpi-card" style={{ cursor: 'pointer' }} onClick={() => navigate('/patient/l2-detection')}>
             <div className="dash-kpi-icon" style={{ background: 'rgba(184,164,255,0.12)', color: 'var(--purple)' }}>
               <i className="bi-hospital" />
             </div>
@@ -144,7 +144,7 @@ export default function PatientDashboardPage() {
               </div>
               <div className="dash-kpi-label">Specialist / L2 Lab</div>
               <div className="dash-kpi-badge" style={{ color: l2Status?.l2_referred ? 'var(--purple)' : 'var(--text4)' }}>
-                {l2Status?.l2_referred ? 'GeneXpert / X-Ray Referred' : 'No urgent escalation'}
+                {l2Status?.l2_referred ? 'GeneXpert / X-Ray Ready' : 'Open L2 Diagnostics →'}
               </div>
             </div>
           </div>
@@ -228,6 +228,25 @@ export default function PatientDashboardPage() {
               </div>
               <div className="dash-action-footer">
                 <span>Browse Records</span>
+                <i className="bi-arrow-right" />
+              </div>
+            </div>
+
+            {/* Action 5 */}
+            <div className="dash-action-card" onClick={() => navigate('/patient/l2-detection')}>
+              <div className="dash-action-top">
+                <div className="dash-action-icon" style={{ background: 'rgba(184,164,255,0.12)', color: 'var(--purple)' }}>
+                  <i className="bi-microscope" />
+                </div>
+                <div>
+                  <div className="dash-action-title">L2 TB Detection Lab</div>
+                  <div className="dash-action-desc">
+                    Upload chest X-ray, enter CBC/CRP blood values and GeneXpert results to generate a fused TB report and PDF.
+                  </div>
+                </div>
+              </div>
+              <div className="dash-action-footer">
+                <span>Open L2 Diagnostics</span>
                 <i className="bi-arrow-right" />
               </div>
             </div>

@@ -21,9 +21,9 @@ export interface SymptomState {
 }
 
 interface TriageState {
-  symptoms: Partial<SymptomState>;
+  symptoms: Record<string, any>;
   riskScore: number | null;
-  priorityTier: 'P1' | 'P2' | 'P3' | null;
+  priorityTier: 'P1' | 'P2' | 'P3' | 'P4' | null;
   consultationId: string | null;
   l2Referred: boolean;
 }
@@ -40,12 +40,12 @@ export const triageSlice = createSlice({
   name: 'triage',
   initialState,
   reducers: {
-    updateSymptoms: (state, action: PayloadAction<Partial<SymptomState>>) => {
+    updateSymptoms: (state, action: PayloadAction<Record<string, any>>) => {
       state.symptoms = { ...state.symptoms, ...action.payload };
     },
     setPrediction: (
       state,
-      action: PayloadAction<{ riskScore: number; priorityTier: 'P1' | 'P2' | 'P3'; consultationId?: string }>
+      action: PayloadAction<{ riskScore: number; priorityTier: 'P1' | 'P2' | 'P3' | 'P4'; consultationId?: string }>
     ) => {
       state.riskScore = action.payload.riskScore;
       state.priorityTier = action.payload.priorityTier;

@@ -5,7 +5,7 @@ import { useModal } from '../../components/ModalProvider';
 import { useProcessing } from '../../components/ProcessingProvider';
 import AppLayout from '../AppLayout';
 import './DoctorPages.css';
-import { doctorApi, L2_FRONTEND_URL } from '../../api/client';
+import { doctorApi } from '../../api/client';
 
 // ═══════════════════════════════════════
 // LIVE QUEUE

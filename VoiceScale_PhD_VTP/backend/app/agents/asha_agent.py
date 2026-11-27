@@ -444,17 +444,31 @@ def _keyword_extract(message: str, existing: dict, language: str = "English") ->
 
 
 # ─── Risk Scorer: XGBoost first, weighted rules fallback ──────────────────────
+def _safe_cough_weeks(v) -> float:
+    """Safely convert numeric or qualitative cough duration values to weeks."""
+    if v is None or v is False:
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    if v == "mentioned_unknown_duration":
+        return 1.5
+    s = str(v).strip()
+    digits = "".join(ch for ch in s if ch.isdigit() or ch == ".")
+    try:
+        return float(digits) if digits else 0.0
+    except ValueError:
+        return 0.0
+
+
 def symptom_dict_to_vector(symptoms: dict) -> list:
     """Convert symptom dict → ordered feature vector for XGBoost inference."""
     def _bool(v):
-        if v is True or v == "yes":
+        if v is True or v == "yes" or v == 1:
             return 1.0
-        if v is False or v == "no":
-            return 0.0
         return 0.0
 
     return [
-        float(symptoms.get("cough_weeks") or 0),
+        _safe_cough_weeks(symptoms.get("cough_weeks")),
         _bool(symptoms.get("night_fever")),
         _bool(symptoms.get("weight_loss")),
         _bool(symptoms.get("hemoptysis")),
@@ -504,7 +518,7 @@ def compute_risk_score(symptoms: dict) -> tuple:
 
     # ── Weighted rules fallback ────────────────────────────────────────────────
     weights = {
-        "cough_weeks":      lambda v: min(float(v) / 8.0, 1.0) * 2.0 if v else 0,
+        "cough_weeks":      lambda v: min(_safe_cough_weeks(v) / 8.0, 1.0) * 2.0 if _safe_cough_weeks(v) > 0 else 0,
         "night_fever":      lambda v: 1.8 if v else 0,
         "weight_loss":      lambda v: 1.5 if v else 0,
         "hemoptysis":       lambda v: 3.0 if v else 0,
@@ -646,7 +660,7 @@ async def run_triage_agent(
     rounds += 1
 
     # Check if session has collected sufficient clinical information
-    is_done = DynamicDialogueManager.should_terminate(symptoms, rounds)
+    is_done = DynamicDialogueManager.should_terminate(symptoms, rounds, asked_targets)
     next_q_info = None if is_done else DynamicDialogueManager.select_next_question(symptoms, asked_targets, language)
 
     if is_done or not next_q_info:

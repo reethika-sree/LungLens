@@ -10,8 +10,8 @@ const getBaseUrl = () => {
 
 export const API_BASE_URL = getBaseUrl();
 
-// L2 TB Detection frontend URL — update this if L2 runs on a different port/host
-export const L2_FRONTEND_URL = (import.meta as any).env?.VITE_L2_URL || 'http://localhost:5174';
+// Internal Patient Portal L2 TB Detection route (unified into LungLens app)
+export const L2_PORTAL_ROUTE = '/patient/l2-detection';
 
 const client = axios.create({ baseURL: API_BASE_URL });
 
@@ -86,6 +86,7 @@ export interface AshaPatient {
   last_checkin: string | null;
   adherence_pct: number;
   today_taken: boolean;
+  checkin_logged_today?: boolean;
   missed_last_7: number;
   consecutive_missed: number;
   screening_due: boolean;
@@ -105,7 +106,7 @@ export const authApi = {
 export interface VoiceCapturePayload   { language: string; voice_transcript: string; }
 export interface SymptomAnswersPayload { [key: string]: string; }
 export interface TBPredictionPayload {
-  record_id: string; risk: string; priority: string; confidence: number;
+  record_id: string; risk: string; priority?: string; confidence: number;
   risk_score: number; explanation: string[];
 }
 export interface L2PDFUploadRequest {
@@ -175,6 +176,7 @@ export const ashaApi = {
   getPatients:      () => client.get('/asha/patients'),
   checkinPatient:   (patientId: string, data: any) => client.post(`/asha/checkin/${patientId}`, data),
   registerPatient:  (data: any) => client.post('/asha/register', data),
+  getVisits:        () => client.get('/asha/visits'),
   getPatientVisits: (patientId: string) => client.get(`/asha/visits/${patientId}`),
   sendReminder:     (patientId: string, data: any) => client.post(`/asha/reminder/${patientId}`, data),
   updateVitals:     (patientId: string, data: any) => client.post(`/asha/vitals/${patientId}`, data),
@@ -235,4 +237,21 @@ export const nlpApi = {
       symptoms_evaluated: Record<string, any>;
       record_id?: string;
     }>('/patient/predict-tb', data),
+};
+
+// ── L2 TB Detection API (mounted under /api/v1/l2) ───────────────────────────
+export const l2Api = {
+  predictXray: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return client.post('/l2/predict/xray', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  predictBlood: (data: { hemoglobin: number; wbc_count: number; esr: number; crp: number }) =>
+    client.post('/l2/predict/blood', data),
+  predictLab: (data: { genexpert_result: string; rifampicin_resistance: string }) =>
+    client.post('/l2/predict/lab', data),
+  predictFinal: (data: { xray_prob: number | null; blood_prob: number | null; lab_result: boolean | null }) =>
+    client.post('/l2/predict/final', data),
 };

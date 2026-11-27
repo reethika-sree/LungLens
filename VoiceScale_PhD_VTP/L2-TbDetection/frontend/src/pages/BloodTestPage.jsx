@@ -123,16 +123,9 @@ export default function BloodTestPage({ onResult, result }) {
           <div className={styles.sectionTag}>MODULE 02</div>
           <h2 className={styles.title}>Blood Test Analysis</h2>
           <p className={styles.subtitle}>
-            Enter CBC and inflammatory marker values. Our XGBoost model evaluates
+            Enter CBC and inflammatory marker values to evaluate
             TB-associated haematological patterns with high accuracy.
           </p>
-        </div>
-        <div className={styles.modelChip}>
-          <div className={styles.modelChipDot} />
-          <div>
-            <div className={styles.modelChipLabel}>AI Model</div>
-            <div className={styles.modelChipName}>XGBoost</div>
-          </div>
         </div>
       </div>
 

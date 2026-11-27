@@ -1,22 +1,28 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import RoleLayout from '../../layouts/RoleLayout';
 import { useToast } from '../../components/ToastProvider';
 import { useAuth } from '../../contexts/AuthContext';
-import { ThemeToggleBtn } from '../../contexts/ThemeContext';
-import { ashaApi, AshaPatient } from '../../api/client';
+import client, { ashaApi, AshaPatient } from '../../api/client';
 import './AshaPages.css';
 import './AshaVitals.css';
 
-/* ══════════════════════════════════════════════════
-   NATIVE MOBILE SHELL — no global AppLayout at all
-   Mimics iOS/Android app shell with safe areas
-══════════════════════════════════════════════════ */
+const PAGE_TITLES: Record<string, string> = {
+  patients: 'Village Patients',
+  checkin:  'Daily DOTS Check-in',
+  register: 'Register Village Patient',
+  visits:   'Home Visit Logs',
+  profile:  'ASHA Profile',
+};
+
 function AshaMobileShell({ children, active }: { children: React.ReactNode; active: string }) {
   return (
-    <div className="asha-shell">
-      <div className="asha-scroll-area">{children}</div>
+    <RoleLayout activeNav={active} pageTitle={PAGE_TITLES[active] || 'ASHA Worker'}>
+      <div style={{ maxWidth: 720, margin: '0 auto', width: '100%', paddingBottom: 72 }}>
+        {children}
+      </div>
       <AshaBottomNav active={active} />
-    </div>
+    </RoleLayout>
   );
 }
 
@@ -26,15 +32,15 @@ function AshaTopBar({
 }: { title: string; subtitle?: string; backPath?: string; rightEl?: React.ReactNode }) {
   const navigate = useNavigate();
   return (
-    <div className="asha-top-bar">
+    <div className="asha-top-bar" style={{ borderRadius: '12px 12px 0 0', position: 'relative' }}>
       <div className="atb-left">
         {backPath ? (
           <button className="asha-back-btn" onClick={() => navigate(backPath)}>
             <i className="bi-chevron-left" />
           </button>
         ) : (
-          <button className="asha-top-logo" onClick={() => navigate('/')} title="Back to home">
-            <i className="bi-lungs-fill" />
+          <button className="asha-back-btn" onClick={() => navigate('/asha/dashboard')} title="Back to ASHA Dashboard">
+            <i className="bi-house-heart-fill" />
           </button>
         )}
       </div>
@@ -42,20 +48,23 @@ function AshaTopBar({
         <div className="asha-top-title">{title}</div>
         {subtitle && <div className="asha-top-sub">{subtitle}</div>}
       </div>
-      <div className="atb-right">{rightEl ?? <div style={{ width:36 }} />}</div>
+      <div className="atb-right">{rightEl ?? <div style={{ width: 36 }} />}</div>
     </div>
   );
 }
 
-/* ── Bottom Navigation ── */
+/* ── Quick Bottom Navigation (Mobile-Friendly Shortcuts) ── */
 function AshaBottomNav({ active }: { active: string }) {
   const navigate = useNavigate();
   const items = [
-    { key:'patients', label:'Patients', icon:'bi-people-fill',       path:'/asha/patients' },
-    { key:'checkin',  label:'Check-in', icon:'bi-check-circle-fill',  path:'/asha/checkin'  },
+    { key:'dashboard', label:'Home',     icon:'bi-house-heart-fill',  path:'/asha/dashboard' },
+    { key:'patients',  label:'Patients', icon:'bi-people-fill',       path:'/asha/patients' },
+    { key:'checkin',   label:'Check-in', icon:'bi-check-circle-fill', path:'/asha/checkin'  },
+    { key:'register',  label:'Register', icon:'bi-person-plus-fill',  path:'/asha/register' },
+    { key:'visits',    label:'Visits',   icon:'bi-journal-medical',   path:'/asha/visits' },
   ];
   return (
-    <nav className="asha-bottom-nav">
+    <nav className="asha-bottom-nav" style={{ borderRadius: 12, marginTop: 12 }}>
       {items.map(it => (
         <button key={it.key}
           className={`asha-nav-btn ${active === it.key ? 'active' : ''}`}
@@ -86,8 +95,9 @@ export function AshaPatientListPage() {
     setLoading(true);
     ashaApi.getPatients()
       .then(res => {
-        setPatients(res.data.patients || []);
-        setSummary(res.data.summary || {});
+        const raw = res.data as any;
+        setPatients(Array.isArray(raw) ? raw : (raw?.patients || []));
+        setSummary(raw?.summary || {});
       })
       .catch(() => showToast('Could not load patients', 'var(--red)', 'bi-exclamation-triangle'))
       .finally(() => setLoading(false));
@@ -243,7 +253,7 @@ export function AshaPatientListPage() {
                       <div key={i} className={`apc-dot ${i >= 7 - p.missed_last_7 ? 'missed' : 'taken'}`} />
                     ))}
                   </div>
-                  <div className="apc-meta" style={{ marginTop:4 }}>DOTS day {p.dots_day} · {p.language}</div>
+                  <div className="apc-meta" style={{ marginTop:4 }}>DOTS day {p.dots_day} · {p.language || 'English'}</div>
                 </div>
               )}
 
@@ -287,6 +297,8 @@ export function AshaPatientListPage() {
 ════════════════════════════════════════════ */
 export function AshaDailyCheckinPage() {
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get('id');
   const [patients, setPatients] = useState<AshaPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const today      = new Date().toISOString().split('T')[0];
@@ -306,8 +318,30 @@ export function AshaDailyCheckinPage() {
     const fetchPatients = async () => {
       try {
         const response = await ashaApi.getPatients();
-        const dotsPatients = response.data.patients?.filter((p: AshaPatient) => p.dots_active) || [];
+        const raw = response.data as any;
+        const list: AshaPatient[] = Array.isArray(raw) ? raw : (raw?.patients || []);
+        const dotsPatients = list.filter((p: AshaPatient) => p.dots_active);
         setPatients(dotsPatients);
+
+        if (requestedId && dotsPatients.length > 0) {
+          const foundIdx = dotsPatients.findIndex((p: AshaPatient) => p.patient_id === requestedId);
+          if (foundIdx >= 0) setPatientIdx(foundIdx);
+        }
+
+        // Sync any persisted real DB check-ins logged today
+        const dbLogged: Record<string, 'taken' | 'missed'> = {};
+        dotsPatients.forEach((p: AshaPatient) => {
+          if (p.checkin_logged_today) {
+            dbLogged[p.patient_id] = p.today_taken ? 'taken' : 'missed';
+          }
+        });
+        if (Object.keys(dbLogged).length > 0) {
+          setStatus(prev => {
+            const merged = { ...prev, ...dbLogged };
+            try { sessionStorage.setItem(storageKey, JSON.stringify(merged)); } catch {}
+            return merged;
+          });
+        }
       } catch (error) {
         showToast('Failed to load patients', 'var(--red)', 'bi-exclamation-triangle');
         console.error('Failed to fetch patients:', error);
@@ -316,7 +350,7 @@ export function AshaDailyCheckinPage() {
       }
     };
     fetchPatients();
-  }, [showToast]);
+  }, [requestedId, showToast, storageKey]);
 
   const dotsPatients = patients;
   const patient      = dotsPatients[patientIdx];
@@ -547,7 +581,7 @@ export function AshaRegisterPage() {
   const [form, setForm]   = useState({ name:'', age:'', sex:'', village:'', phone:'', complaint:'', language:'', temperature:'', weight:'', bp: { systolic: '', diastolic: '' } });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const ticket = `PRE-2026-${Math.floor(Math.random()*9000+1000)}`;
+  const [createdTicket, setCreatedTicket] = useState('');
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -566,12 +600,12 @@ export function AshaRegisterPage() {
         village: form.village,
         phone: form.phone,
         chief_complaint: form.complaint,
-        preferred_language: form.language,
+        preferred_language: form.language || 'English',
         temperature: form.temperature ? parseFloat(form.temperature) : undefined,
         weight: form.weight ? parseFloat(form.weight) : undefined,
         blood_pressure: (form.bp.systolic && form.bp.diastolic) ? `${form.bp.systolic}/${form.bp.diastolic}` : undefined
       });
-      
+      setCreatedTicket(response.data?.ticket || `PRE-${new Date().getFullYear()}-NEW`);
       setSuccess(true);
       showToast(`Patient registered — ${response.data.message}`, 'var(--green)', 'bi-check-circle-fill');
     } catch (error) {
@@ -588,14 +622,13 @@ export function AshaRegisterPage() {
       <div className="asha-success-screen">
         <div className="asha-success-icon"><i className="bi-check-circle-fill" /></div>
         <div className="asha-success-title">Patient registered!</div>
-        <div className="asha-success-sub">PHC Chittoor has been notified.<br />Ticket: <strong>{ticket}</strong></div>
+        <div className="asha-success-sub">PHC Chittoor has been notified and added to Village Patients.<br />Ticket: <strong>{createdTicket}</strong></div>
         <button className="asha-big-btn asha-btn-ok" style={{ marginTop:24 }}
-          onClick={() => { setSuccess(false); setForm({ name:'', age:'', sex:'', village:'', phone:'', complaint:'', language:'', temperature:'', weight:'', bp: { systolic: '', diastolic: '' } }); }}>
+          onClick={() => { setSuccess(false); setCreatedTicket(''); setForm({ name:'', age:'', sex:'', village:'', phone:'', complaint:'', language:'', temperature:'', weight:'', bp: { systolic: '', diastolic: '' } }); }}>
           Register another patient
         </button>
         <button className="asha-ghost-btn" onClick={() => navigate('/asha/patients')}>Back to patients</button>
       </div>
-      <div style={{ height:100 }} />
     </AshaMobileShell>
   );
 
@@ -702,6 +735,7 @@ export function AshaRegisterPage() {
 ════════════════════════════════════════════ */
 export function AshaVisitLogPage() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<string|null>(null);
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -709,10 +743,8 @@ export function AshaVisitLogPage() {
   useEffect(() => {
     const fetchVisits = async () => {
       try {
-        // For now, we'll use a mock patient ID since we don't have patient selection
-        // In a real implementation, this would come from navigation state or selection
-        const response = await ashaApi.getPatientVisits('p001');
-        setVisits(response.data.visits || []);
+        const response = await ashaApi.getVisits();
+        setVisits(response.data?.visits || []);
       } catch (error) {
         showToast('Failed to load visits', 'var(--red)', 'bi-exclamation-triangle');
         console.error('Failed to fetch visits:', error);
@@ -723,9 +755,34 @@ export function AshaVisitLogPage() {
     fetchVisits();
   }, [showToast]);
 
-  const sColor = (s:string) => s==='taken'?'var(--green)':s==='missed'?'var(--red)':'var(--amber)';
-  const sIcon  = (s:string) => s==='taken'?'bi-check-circle-fill':s==='missed'?'bi-x-circle-fill':'bi-clock-fill';
-  const sLabel = (s:string) => s==='taken'?'Taken':s==='missed'?'Missed':'Pending';
+  const isTakenStatus = (s: string) => s === 'taken' || s === 'completed';
+  const sColor = (s:string) => isTakenStatus(s)?'var(--green)':s==='missed'?'var(--red)':'var(--amber)';
+  const sIcon  = (s:string) => isTakenStatus(s)?'bi-check-circle-fill':s==='missed'?'bi-x-circle-fill':'bi-clock-fill';
+  const sLabel = (s:string) => s==='taken'?'Taken':s==='completed'?'Completed':s==='missed'?'Missed':s==='sent'?'Reminded':'Pending';
+
+  const handleExportCsv = () => {
+    if (visits.length === 0) {
+      showToast('No visit logs to export yet', 'var(--amber)', 'bi-info-circle');
+      return;
+    }
+    const header = ['Date', 'Patient', 'Type', 'Status', 'Notes'];
+    const rows = visits.map(v => [
+      v.date || '',
+      v.patient || '',
+      v.type || '',
+      sLabel(v.status || ''),
+      (v.note || v.notes || '').replace(/"/g, '""'),
+    ]);
+    const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `asha_visits_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Visit log exported to CSV', 'var(--teal)', 'bi-download');
+  };
 
   if (loading) {
     return (
@@ -747,44 +804,57 @@ export function AshaVisitLogPage() {
         title="Visit Log"
         subtitle={`${visits.length} visits recorded`}
         rightEl={
-          <button className="asha-icon-btn" onClick={() => showToast('Log exported','var(--teal)','bi-download')}>
+          <button className="asha-icon-btn" onClick={handleExportCsv} title="Export visit log CSV">
             <i className="bi-download" />
           </button>
         }
       />
 
       <div className="asha-log-summary">
-        <div className="als-pill green"><i className="bi-check-circle-fill" /> {visits.filter(v=>v.status==='taken').length} taken</div>
+        <div className="als-pill green"><i className="bi-check-circle-fill" /> {visits.filter(v=>isTakenStatus(v.status)).length} completed</div>
         <div className="als-pill red"><i className="bi-x-circle-fill" /> {visits.filter(v=>v.status==='missed').length} missed</div>
-        <div className="als-pill amber"><i className="bi-clock-fill" /> {visits.filter(v=>v.status==='pending').length} pending</div>
+        <div className="als-pill amber"><i className="bi-clock-fill" /> {visits.filter(v=>v.status==='pending'||v.status==='sent').length} reminders/pending</div>
       </div>
 
-      <div className="asha-log-list">
-        {visits.map(v => (
-          <div key={v.id} className={`asha-log-item ${selected===v.id?'expanded':''}`}
-            onClick={() => setSelected(selected===v.id ? null : v.id)}>
-            <div className="ali-row">
-              <div className="ali-icon" style={{ color:sColor(v.status) }}><i className={sIcon(v.status)} /></div>
-              <div className="ali-body">
-                <div className="ali-name">{v.patient}</div>
-                <div className="ali-meta">{v.date} · {v.type}</div>
+      {visits.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 12, color: 'var(--text4)', padding: '24px' }}>
+          <i className="bi-journal-medical" style={{ fontSize: 32 }} />
+          <div style={{ fontSize: 13 }}>No visits or DOTS check-ins logged yet.</div>
+          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => navigate('/asha/checkin')}>
+            Log Today's DOTS Check-in
+          </button>
+        </div>
+      ) : (
+        <div className="asha-log-list">
+          {visits.map((v, idx) => {
+            const vid = v.id || `visit-${idx}`;
+            const noteText = v.note || v.notes || 'No notes recorded.';
+            return (
+              <div key={vid} className={`asha-log-item ${selected===vid?'expanded':''}`}
+                onClick={() => setSelected(selected===vid ? null : vid)}>
+                <div className="ali-row">
+                  <div className="ali-icon" style={{ color:sColor(v.status) }}><i className={sIcon(v.status)} /></div>
+                  <div className="ali-body">
+                    <div className="ali-name">{v.patient || 'Village Patient'}</div>
+                    <div className="ali-meta">{v.date} · {v.type}</div>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span className="asha-badge" style={{ background:`${sColor(v.status)}18`, color:sColor(v.status), border:`1px solid ${sColor(v.status)}30`, fontSize:10, padding:'2px 8px', borderRadius:20, fontWeight:700 }}>
+                      {sLabel(v.status)}
+                    </span>
+                    <i className={`bi-chevron-${selected===vid?'up':'down'}`} style={{ color:'var(--text4)', fontSize:11 }} />
+                  </div>
+                </div>
+                {selected===vid && (
+                  <div className="ali-note">
+                    <i className="bi-chat-text" style={{ marginRight:6, color:'var(--text4)' }} />{noteText}
+                  </div>
+                )}
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <span className="asha-badge" style={{ background:`${sColor(v.status)}18`, color:sColor(v.status), border:`1px solid ${sColor(v.status)}30`, fontSize:10, padding:'2px 8px', borderRadius:20, fontWeight:700 }}>
-                  {sLabel(v.status)}
-                </span>
-                <i className={`bi-chevron-${selected===v.id?'up':'down'}`} style={{ color:'var(--text4)', fontSize:11 }} />
-              </div>
-            </div>
-            {selected===v.id && (
-              <div className="ali-note">
-                <i className="bi-chat-text" style={{ marginRight:6, color:'var(--text4)' }} />{v.note}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-      <div style={{ height:100 }} />
+            );
+          })}
+        </div>
+      )}
     </AshaMobileShell>
   );
 }
@@ -793,12 +863,44 @@ export function AshaVisitLogPage() {
    PAGE 5 — ASHA PROFILE
 ════════════════════════════════════════════ */
 export function AshaProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const navigate          = useNavigate();
   const { showToast }     = useToast();
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(user?.full_name || 'Lakshmi Devi');
   const [phone, setPhone]       = useState('+91 98765 43210');
+  const [patientCount, setPatientCount] = useState<number>(0);
+  const [visitCount, setVisitCount] = useState<number>(0);
+  const [dotsCount, setDotsCount] = useState<number>(0);
+  const [avgAdherence, setAvgAdherence] = useState<number>(0);
+
+  useEffect(() => {
+    Promise.all([ashaApi.getPatients(), ashaApi.getVisits()])
+      .then(([pRes, vRes]) => {
+        const rawP = pRes.data as any;
+        const plist = Array.isArray(rawP) ? rawP : (rawP?.patients || []);
+        const vlist = vRes.data?.visits || [];
+        setPatientCount(plist.length);
+        setVisitCount(vlist.length);
+        setDotsCount(vlist.filter((v: any) => v.type === 'DOTS').length);
+        if (plist.length > 0) {
+          setAvgAdherence(Math.round(plist.reduce((s: number, p: any) => s + (p.adherence_pct || 0), 0) / plist.length));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveProfile = async () => {
+    try {
+      const res = await client.put('/auth/me', { full_name: fullName });
+      if (res.data) setUser(res.data);
+      setEditMode(false);
+      showToast('Profile saved', 'var(--green)', 'bi-check2');
+    } catch {
+      setEditMode(false);
+      showToast('Profile updated locally', 'var(--teal)', 'bi-check2');
+    }
+  };
 
   return (
     <AshaMobileShell active="profile">
@@ -809,7 +911,7 @@ export function AshaProfilePage() {
         </div>
         <div className="asha-checkin-name" style={{ fontSize:18 }}>{user?.full_name||'Lakshmi Devi'}</div>
         <div className="asha-checkin-meta" style={{ marginBottom:8 }}>ASHA Worker · Chittoor Block</div>
-        <span className="asha-badge asha-badge-ok">Active · 4 patients assigned</span>
+        <span className="asha-badge asha-badge-ok">Active · {patientCount} patient{patientCount === 1 ? '' : 's'} assigned</span>
       </div>
 
       <div className="asha-profile-section">
@@ -826,14 +928,14 @@ export function AshaProfilePage() {
             </div>
             <div style={{ display:'flex', gap:8 }}>
               <button className="asha-big-btn asha-btn-ok" style={{ flex:1, padding:'10px' }}
-                onClick={() => { setEditMode(false); showToast('Profile saved','var(--green)','bi-check2'); }}>Save</button>
+                onClick={saveProfile}>Save</button>
               <button className="asha-ghost-btn" style={{ flex:1, padding:'10px', marginTop:0 }}
                 onClick={() => setEditMode(false)}>Cancel</button>
             </div>
           </>
         ) : (
           <>
-            {[['Email', user?.email||'lakshmi@nrhm.gov.in'],['Phone',phone],['Block','Chittoor Block, AP'],['ASHA ID','ASHA-CHT-2024-0847']].map(([k,v]) => (
+            {[['Email', user?.email||'demo_asha@lunglens.in'],['Phone',phone],['Block','Chittoor Block, AP'],['ASHA ID', user?.user_id || 'ASHA-CHT-2026']].map(([k,v]) => (
               <div key={k} className="aps-row"><span className="aps-key">{k}</span><span className="aps-val">{v}</span></div>
             ))}
             <button className="asha-ghost-btn" style={{ marginTop:10 }} onClick={() => setEditMode(true)}>
@@ -844,12 +946,12 @@ export function AshaProfilePage() {
       </div>
 
       <div className="asha-profile-section">
-        <div className="aps-title">My stats (this month)</div>
+        <div className="aps-title">My stats (live)</div>
         <div className="asha-stats-mini" style={{ marginBottom:0 }}>
-          <div className="asm-card"><div className="asm-label">Visits done</div><div className="asm-val">38</div></div>
-          <div className="asm-card"><div className="asm-label">DOTS logged</div><div className="asm-val">52</div></div>
-          <div className="asm-card"><div className="asm-label">Registered</div><div className="asm-val">3</div></div>
-          <div className="asm-card"><div className="asm-label">Adherence</div><div className="asm-val" style={{ color:'var(--green)' }}>82%</div></div>
+          <div className="asm-card"><div className="asm-label">Visits done</div><div className="asm-val">{visitCount}</div></div>
+          <div className="asm-card"><div className="asm-label">DOTS logged</div><div className="asm-val">{dotsCount}</div></div>
+          <div className="asm-card"><div className="asm-label">Assigned</div><div className="asm-val">{patientCount}</div></div>
+          <div className="asm-card"><div className="asm-label">Adherence</div><div className="asm-val" style={{ color:'var(--green)' }}>{avgAdherence}%</div></div>
         </div>
       </div>
 
@@ -859,7 +961,6 @@ export function AshaProfilePage() {
           <i className="bi-box-arrow-right" /> Sign out
         </button>
       </div>
-      <div style={{ height:100 }} />
     </AshaMobileShell>
   );
 }

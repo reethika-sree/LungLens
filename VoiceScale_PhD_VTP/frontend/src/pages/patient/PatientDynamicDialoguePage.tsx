@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import RoleLayout from '../../layouts/RoleLayout';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useToast } from '../../components/ToastProvider';
+import { useAppDispatch } from '../../store/hooks';
+import { updateSymptoms, resetTriage } from '../../store/slices/triageSlice';
 import { nlpApi } from '../../api/client';
 import '../../styles/Dashboard.css';
 
@@ -39,17 +41,18 @@ export default function PatientDynamicDialoguePage() {
   const location = useLocation();
   const { showToast } = useToast();
   const { language } = useLanguage();
+  const dispatch = useAppDispatch();
 
-  const lang: string =
+  const rawLang: string =
     (location.state as any)?.language ||
     sessionStorage.getItem('selectedLanguage') ||
     language ||
     'English';
+  const lang: 'Telugu' | 'Hindi' | 'English' =
+    rawLang === 'Telugu' || rawLang === 'Hindi' || rawLang === 'English' ? rawLang : 'English';
 
-  const initialVoiceText =
-    (location.state as any)?.voiceText ||
-    sessionStorage.getItem('voiceCaptureText') ||
-    '';
+  const navVoiceText = ((location.state as any)?.voiceText || '').trim();
+  const initialVoiceText = navVoiceText || (sessionStorage.getItem('voiceCaptureText') || '').trim();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [symptoms, setSymptoms] = useState<Record<string, any>>({});
@@ -63,61 +66,106 @@ export default function PatientDynamicDialoguePage() {
 
   const recogRef = useRef<any>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const startedKeyRef = useRef<string | null>(null);
+
+  const persistDialogueSnapshot = (
+    msgs: Message[],
+    syms: Record<string, any>,
+    st: any,
+    q: string,
+    target: string | null,
+    doneFlag: boolean
+  ) => {
+    const symsStr = JSON.stringify(syms || {});
+    sessionStorage.setItem('dialogueSymptoms', symsStr);
+    sessionStorage.setItem('extractedSymptoms', symsStr);
+    sessionStorage.setItem('dialogueSession', JSON.stringify({
+      language: lang,
+      messages: msgs,
+      symptoms: syms,
+      state: st,
+      currentQuestion: q,
+      targetSymptom: target,
+      isDone: doneFlag,
+    }));
+    dispatch(updateSymptoms(syms || {}));
+  };
 
   // Auto-scroll chat area
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, currentQuestion]);
 
-  // Initialize Dialogue with initial speech
+  const startFreshSession = async (speechText: string) => {
+    setLoading(true);
+    const recordId = (location.state as any)?.recordId || sessionStorage.getItem('record_id') || undefined;
+    const msgs: Message[] = [];
+    if (speechText) {
+      msgs.push({
+        sender: 'patient',
+        text: speechText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+    }
+
+    try {
+      const res = await nlpApi.startDialogue({
+        language: lang,
+        initial_speech: speechText,
+        record_id: recordId
+      });
+
+      const syms = res.data.detected_symptoms || {};
+      const q = res.data.reply_local || res.data.reply;
+      msgs.push({
+        sender: 'ai',
+        text: q,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      setDialogueState(res.data.state);
+      setSymptoms(syms);
+      setCurrentQuestion(q);
+      setTargetSymptom(res.data.target_symptom);
+      setIsDone(res.data.done);
+      setMessages(msgs);
+      persistDialogueSnapshot(msgs, syms, res.data.state, q, res.data.target_symptom, res.data.done);
+    } catch (err) {
+      console.error('Failed to start dynamic dialogue', err);
+      showToast('Dialogue service error. Please check backend connection.', 'var(--red)', 'bi-exclamation-triangle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize or restore Dialogue cleanly (avoids StrictMode duplicate starts)
   useEffect(() => {
-    let mounted = true;
-    const startSession = async () => {
-      setLoading(true);
-      const recordId = sessionStorage.getItem('record_id') || undefined;
-      const initialText = initialVoiceText.trim();
+    const initKey = `${lang}::${navVoiceText}`;
+    if (startedKeyRef.current === initKey) return;
+    startedKeyRef.current = initKey;
 
-      const msgs: Message[] = [];
-      if (initialText) {
-        msgs.push({
-          sender: 'patient',
-          text: initialText,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+    if (!navVoiceText) {
+      const savedRaw = sessionStorage.getItem('dialogueSession');
+      if (savedRaw) {
+        try {
+          const saved = JSON.parse(savedRaw);
+          if (saved.language === lang && Array.isArray(saved.messages) && saved.messages.length > 0 && saved.state) {
+            setMessages(saved.messages);
+            setSymptoms(saved.symptoms || {});
+            setDialogueState(saved.state);
+            setCurrentQuestion(saved.currentQuestion || '');
+            setTargetSymptom(saved.targetSymptom ?? null);
+            setIsDone(!!saved.isDone);
+            dispatch(updateSymptoms(saved.symptoms || {}));
+            setLoading(false);
+            return;
+          }
+        } catch { /* ignore invalid cache */ }
       }
+    }
 
-      try {
-        const res = await nlpApi.startDialogue({
-          language: lang,
-          initial_speech: initialText,
-          record_id: recordId
-        });
-
-        if (mounted) {
-          setDialogueState(res.data.state);
-          setSymptoms(res.data.detected_symptoms || {});
-          setCurrentQuestion(res.data.reply_local || res.data.reply);
-          setTargetSymptom(res.data.target_symptom);
-          setIsDone(res.data.done);
-
-          msgs.push({
-            sender: 'ai',
-            text: res.data.reply_local || res.data.reply,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          });
-          setMessages(msgs);
-        }
-      } catch (err) {
-        console.error('Failed to start dynamic dialogue', err);
-        showToast('Dialogue service offline. Proceeding to questionnaire.', 'var(--amber)', 'bi-info-circle');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    startSession();
-    return () => { mounted = false; };
-  }, []);
+    startFreshSession(initialVoiceText);
+  }, [lang, navVoiceText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Submit Answer to Dialogue Engine
   const submitAnswer = async (textToSubmit: string) => {
@@ -126,7 +174,8 @@ export default function PatientDynamicDialoguePage() {
 
     setUserInput('');
     const userTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages(prev => [...prev, { sender: 'patient', text, time: userTime }]);
+    const nextUserMsgs: Message[] = [...messages, { sender: 'patient', text, time: userTime }];
+    setMessages(nextUserMsgs);
     setLoading(true);
 
     try {
@@ -140,18 +189,19 @@ export default function PatientDynamicDialoguePage() {
 
       const aiReply = res.data.reply_local || res.data.reply;
       const aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const updatedSyms = res.data.symptoms || {};
+      const nextMsgs: Message[] = [...nextUserMsgs, { sender: 'ai', text: aiReply, time: aiTime }];
 
       setDialogueState(res.data.state);
-      setSymptoms(res.data.symptoms || {});
+      setSymptoms(updatedSyms);
       setCurrentQuestion(aiReply);
       setTargetSymptom(res.data.target_symptom);
       setIsDone(res.data.done);
-
-      setMessages(prev => [...prev, { sender: 'ai', text: aiReply, time: aiTime }]);
+      setMessages(nextMsgs);
+      persistDialogueSnapshot(nextMsgs, updatedSyms, res.data.state, aiReply, res.data.target_symptom, res.data.done);
 
       if (res.data.done) {
-        sessionStorage.setItem('extractedSymptoms', JSON.stringify(res.data.symptoms));
-        showToast('Clinical information complete. Assessment ready.', 'var(--teal)', 'bi-check-circle-fill');
+        showToast('Clinical intake complete. Click View AI TB Risk Assessment.', 'var(--teal)', 'bi-check-circle-fill');
       }
     } catch (err) {
       console.error('Step dialogue error', err);
@@ -159,6 +209,19 @@ export default function PatientDynamicDialoguePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRestartDialogue = () => {
+    sessionStorage.removeItem('dialogueSession');
+    sessionStorage.removeItem('dialogueSymptoms');
+    sessionStorage.removeItem('extractedSymptoms');
+    sessionStorage.removeItem('voiceCaptureText');
+    sessionStorage.removeItem('record_id');
+    dispatch(resetTriage());
+    setIsDone(false);
+    setMessages([]);
+    setSymptoms({});
+    startFreshSession('');
   };
 
   // Web Speech API Voice Input
@@ -201,8 +264,21 @@ export default function PatientDynamicDialoguePage() {
   };
 
   const handleProceedToPrediction = () => {
-    sessionStorage.setItem('extractedSymptoms', JSON.stringify(symptoms));
-    navigate('/patient/prediction', { state: { symptoms, language: lang } });
+    if (Object.keys(symptoms).length === 0) {
+      showToast('Please answer at least one symptom question or type your symptoms first.', 'var(--amber)', 'bi-info-circle');
+      return;
+    }
+    const symsStr = JSON.stringify(symptoms);
+    sessionStorage.setItem('dialogueSymptoms', symsStr);
+    sessionStorage.setItem('extractedSymptoms', symsStr);
+    dispatch(updateSymptoms(symptoms));
+    navigate('/patient/prediction', {
+      state: {
+        symptoms,
+        language: lang,
+        recordId: sessionStorage.getItem('record_id') || undefined,
+      },
+    });
   };
 
   return (
@@ -234,6 +310,14 @@ export default function PatientDynamicDialoguePage() {
             </span>
             <button
               className="vc-btn vc-btn-ghost vc-btn-sm"
+              onClick={handleRestartDialogue}
+              disabled={loading}
+              title="Reset dialogue session"
+            >
+              <i className="bi-arrow-clockwise" /> Restart
+            </button>
+            <button
+              className="vc-btn vc-btn-ghost vc-btn-sm"
               onClick={() => navigate('/patient/language')}
             >
               Change Language
@@ -247,7 +331,7 @@ export default function PatientDynamicDialoguePage() {
           <div className="dash-panel" style={{ padding: 18, position: 'sticky', top: 80 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="bi-clipboard2-pulse-fill" style={{ color: 'var(--teal)' }} />
-              <span>Extracted Symptoms ({Object.keys(symptoms).length})</span>
+              <span>Extracted Symptoms ({Object.keys(symptoms).length} / {Object.keys(SYMPTOM_LABELS).length})</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '60vh', overflowY: 'auto' }}>
@@ -391,85 +475,68 @@ export default function PatientDynamicDialoguePage() {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {/* Quick Options Chips */}
+                  {/* Quick Options Chips — contextual for cough_weeks vs Yes/No questions */}
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text4)' }}>Quick Answer:</span>
 
-                    {/* Telugu Avunu / Ledhu options as requested in Section 4 */}
-                    {lang === 'Telugu' ? (
+                    {targetSymptom === 'cough_weeks' ? (
+                      lang === 'Telugu' ? (
+                        <>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('దగ్గు లేదు')} disabled={loading}>✗ దగ్గు లేదు (No Cough)</button>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('1 వారం')} disabled={loading}>1 వారం</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 వారాలు')} disabled={loading}>2 వారాలు</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 వారాలు')} disabled={loading}>3 వారాలు</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 నెల')} disabled={loading}>1 నెల+</button>
+                        </>
+                      ) : lang === 'Hindi' ? (
+                        <>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('खांसी नहीं है')} disabled={loading}>✗ खांसी नहीं है (No Cough)</button>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('1 हफ्ता')} disabled={loading}>1 हफ्ता</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 हफ्ते')} disabled={loading}>2 हफ्ते</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 हफ्ते')} disabled={loading}>3 हफ्ते</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 महीना')} disabled={loading}>1 महीना+</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('No cough')} disabled={loading}>✗ No Cough</button>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('several days')} disabled={loading}>&lt; 1 week</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 week')} disabled={loading}>1 week</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 weeks')} disabled={loading}>2 weeks</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 weeks')} disabled={loading}>3 weeks</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 month')} disabled={loading}>1 month+</button>
+                        </>
+                      )
+                    ) : targetSymptom === 'cough_phlegm' ? (
+                      lang === 'Telugu' ? (
+                        <>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('Avunu (అవును)')} disabled={loading}>✓ అవును (కఫం ఉంది)</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('Ledhu (లేదు)')} disabled={loading}>✗ లేదు (పొడి దగ్గు)</button>
+                        </>
+                      ) : lang === 'Hindi' ? (
+                        <>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('हाँ (Yes)')} disabled={loading}>✓ हाँ (बलगम है)</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('नहीं (No)')} disabled={loading}>✗ नहीं (सूखी खांसी)</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('Yes (Phlegm)')} disabled={loading}>✓ Yes (Phlegm)</button>
+                          <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('No (Dry Cough)')} disabled={loading}>✗ No (Dry Cough)</button>
+                        </>
+                      )
+                    ) : lang === 'Telugu' ? (
                       <>
-                        <button
-                          className="vc-btn vc-btn-teal vc-btn-sm"
-                          onClick={() => submitAnswer('Avunu (అవును)')}
-                          disabled={loading}
-                        >
-                          ✓ Avunu (అవును)
-                        </button>
-                        <button
-                          className="vc-btn vc-btn-ghost vc-btn-sm"
-                          onClick={() => submitAnswer('Ledhu (లేదు)')}
-                          disabled={loading}
-                        >
-                          ✗ Ledhu (లేదు)
-                        </button>
-                        {targetSymptom === 'cough_weeks' && (
-                          <>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 వారం')} disabled={loading}>1 వారం</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 వారాలు')} disabled={loading}>2 వారాలు</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 వారాలు')} disabled={loading}>3 వారాలు</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 నెల')} disabled={loading}>1 నెల</button>
-                          </>
-                        )}
+                        <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('Avunu (అవును)')} disabled={loading}>✓ Avunu (అవును)</button>
+                        <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('Ledhu (లేదు)')} disabled={loading}>✗ Ledhu (లేదు)</button>
                       </>
                     ) : lang === 'Hindi' ? (
                       <>
-                        <button
-                          className="vc-btn vc-btn-teal vc-btn-sm"
-                          onClick={() => submitAnswer('हाँ (Yes)')}
-                          disabled={loading}
-                        >
-                          ✓ हाँ (Yes)
-                        </button>
-                        <button
-                          className="vc-btn vc-btn-ghost vc-btn-sm"
-                          onClick={() => submitAnswer('नहीं (No)')}
-                          disabled={loading}
-                        >
-                          ✗ नहीं (No)
-                        </button>
-                        {targetSymptom === 'cough_weeks' && (
-                          <>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 हफ्ता')} disabled={loading}>1 हफ्ता</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 हफ्ते')} disabled={loading}>2 हफ्ते</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 हफ्ते')} disabled={loading}>3 हफ्ते</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 महीना')} disabled={loading}>1 महीना</button>
-                          </>
-                        )}
+                        <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('हाँ (Yes)')} disabled={loading}>✓ हाँ (Yes)</button>
+                        <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('नहीं (No)')} disabled={loading}>✗ नहीं (No)</button>
                       </>
                     ) : (
                       <>
-                        <button
-                          className="vc-btn vc-btn-teal vc-btn-sm"
-                          onClick={() => submitAnswer('Yes')}
-                          disabled={loading}
-                        >
-                          ✓ Yes
-                        </button>
-                        <button
-                          className="vc-btn vc-btn-ghost vc-btn-sm"
-                          onClick={() => submitAnswer('No')}
-                          disabled={loading}
-                        >
-                          ✗ No
-                        </button>
-                        {targetSymptom === 'cough_weeks' && (
-                          <>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 week')} disabled={loading}>1 week</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('2 weeks')} disabled={loading}>2 weeks</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('3 weeks')} disabled={loading}>3 weeks</button>
-                            <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('1 month')} disabled={loading}>1 month</button>
-                          </>
-                        )}
+                        <button className="vc-btn vc-btn-teal vc-btn-sm" onClick={() => submitAnswer('Yes')} disabled={loading}>✓ Yes</button>
+                        <button className="vc-btn vc-btn-ghost vc-btn-sm" onClick={() => submitAnswer('No')} disabled={loading}>✗ No</button>
                       </>
                     )}
                   </div>

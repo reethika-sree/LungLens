@@ -174,8 +174,12 @@ def is_clause_negated(clause: str, match_pos: int, match_len: int, language: str
 
 
 def extract_duration_weeks(text: str) -> Optional[int]:
-    """Parse numeric durations like '3 weeks', '2 months', '15 days', 'మూడు వారాల', '2 महीने'."""
-    text_lower = text.lower()
+    """Parse numeric durations like '3 weeks', '2 months', '15 days', 'several days', '3 వారాల', '2 महीने'."""
+    text_lower = text.lower().strip()
+
+    # Handle qualitative short-duration phrases
+    if any(p in text_lower for p in ("several days", "few days", "less than a week", "< 1 week", "<1 week", "కొన్ని రోజులు", "कुछ दिन")):
+        return 1
 
     # Direct digit pattern: e.g. "3 weeks", "2 months", "15 days", "3 వారాల", "2 महीने"
     m = re.search(r'(\d+)\s*([a-zA-Z\u0C00-\u0C7F\u0900-\u097F]+)', text_lower)
@@ -277,39 +281,52 @@ def extract_symptoms_from_speech(text: str, current_symptoms: Optional[Dict[str,
 
 def parse_direct_answer(message: str, target_symptom: str, language: str = "English") -> Tuple[Optional[Any], bool]:
     """
-    Interpret direct answers like 'Avunu (అవును)', 'Ledhu (లేదు)', 'Yes', 'No', '2 weeks'
+    Interpret direct answers like 'Avunu (అవును)', 'Ledhu (లేదు)', 'Yes', 'No', '2 weeks', or '2'
     for the symptom currently being questioned.
     Returns (value, is_clear).
     """
     msg = message.strip().lower()
 
-    # 1. Check for numeric duration if target is cough_weeks
+    # 1. Check for numeric or unit-based duration if target is cough_weeks
     if target_symptom in ("cough_weeks", "cough_duration"):
         dur = extract_duration_weeks(msg)
         if dur is not None:
             return dur, True
+        bare_num = re.fullmatch(r'(\d{1,2})', msg)
+        if bare_num:
+            return int(bare_num.group(1)), True
 
-    # 2. Check Affirmative Markers (Avunu, Yes, Haan, etc.)
-    all_affirmatives = []
-    for l in ["English", "Telugu", "Hindi"]:
-        all_affirmatives.extend(AFFIRMATIVE_LEXICON.get(l, []))
+    # Handle direct 'dry cough' replies when asking about phlegm
+    if target_symptom == "cough_phlegm":
+        has_dry = any(tok in msg for tok in ("dry cough", "dry", "పొడి", "podi", "सूखी", "sookhi"))
+        has_phlegm = any(tok in msg for tok in ("phlegm", "wet", "mucus", "కఫం", "తెమడ", "बलगम", "कफ"))
+        if has_dry and not has_phlegm and not re.search(r'\b(?:no|not)\s+dry\b', msg):
+            return False, True
 
-    for aff in all_affirmatives:
-        if re.search(r'(?:\b|_|\s|^)' + re.escape(aff.lower()) + r'(?:\b|_|\s|$)', msg) or aff.lower() == msg:
-            if target_symptom in ("cough_weeks", "cough_duration"):
-                return 3, True  # Default presumptive duration if yes without number
-            return True, True
+    bound_left = r'(?:^|[\s\(\),;।!?\.\-_✓✗])'
+    bound_right = r'(?:$|[\s\(\),;।!?\.\-_])'
 
-    # 3. Check Negation Markers (Ledhu, No, Nahi, etc.)
+    # 2. Check Negation Markers FIRST if explicitly 'no cough' / 'ledhu' / 'no'
     all_negatives = []
     for l in ["English", "Telugu", "Hindi"]:
         all_negatives.extend(NEGATION_LEXICON.get(l, []))
 
     for neg in all_negatives:
-        if re.search(r'(?:\b|_|\s|^)' + re.escape(neg.lower()) + r'(?:\b|_|\s|$)', msg) or neg.lower() == msg:
+        if re.search(bound_left + re.escape(neg.lower()) + bound_right, msg) or neg.lower() == msg:
             if target_symptom in ("cough_weeks", "cough_duration"):
                 return 0, True
             return False, True
+
+    # 3. Check Affirmative Markers (Avunu, Yes, Haan, etc.)
+    all_affirmatives = []
+    for l in ["English", "Telugu", "Hindi"]:
+        all_affirmatives.extend(AFFIRMATIVE_LEXICON.get(l, []))
+
+    for aff in all_affirmatives:
+        if re.search(bound_left + re.escape(aff.lower()) + bound_right, msg) or aff.lower() == msg:
+            if target_symptom in ("cough_weeks", "cough_duration"):
+                return 3, True  # Default presumptive duration if yes without number
+            return True, True
 
     # 4. If full sentence spoken, run clause extraction
     extracted = extract_symptoms_from_speech(message, {}, language)
@@ -365,37 +382,45 @@ class DynamicDialogueManager:
                 continue
 
             # This is our next dynamic question
-            q_text = spec["questions"].get(language, spec["questions"]["English"])
+            if key == "cough_duration" and val is None:
+                q_text = {
+                    "English": "Do you have a cough? If yes, for how long? (e.g. 'No', '2 weeks', '1 month', 'several days')",
+                    "Telugu": "మీకు దగ్గు ఉందా? ఉంటే ఎంత కాలం నుండి ఉంది? (ఉదా: 'లేదు', '2 వారాలు', '1 నెల')",
+                    "Hindi": "क्या आपको खांसी है? यदि हाँ, तो कितने समय से? (जैसे 'नहीं', '2 हफ्ते', '1 महीना')",
+                }.get(language, spec["questions"]["English"])
+            else:
+                q_text = spec["questions"].get(language, spec["questions"]["English"])
             return {
                 "key": key,
                 "target": target,
                 "text": q_text,
-                "requires_number": False
+                "requires_number": target == "cough_weeks",
             }
 
         return None
 
     @staticmethod
-    def should_terminate(symptoms: Dict[str, Any], rounds_completed: int) -> bool:
+    def should_terminate(
+        symptoms: Dict[str, Any],
+        rounds_completed: int,
+        asked_targets: Optional[List[str]] = None,
+    ) -> bool:
         """
-        Determine if sufficient information has been collected:
-        - 4-5 dynamic rounds answered
-        - OR red-flag hemoptysis confirmed with prolonged cough
-        - OR all primary symptoms known
+        Terminate only once all applicable clinical questions in the questionnaire
+        have been resolved/asked (skipping already-known symptoms), with a safety loop cap.
         """
-        if rounds_completed >= 5:
+        if rounds_completed >= len(DYNAMIC_QUESTION_BANK) + 5:
             return True
 
-        # Check critical red flags
-        if symptoms.get("hemoptysis") is True and isinstance(symptoms.get("cough_weeks"), (int, float)) and symptoms.get("cough_weeks", 0) >= 2:
-            if rounds_completed >= 3:
-                return True
+        if asked_targets is not None:
+            return DynamicDialogueManager.select_next_question(symptoms, asked_targets) is None
 
-        # Count how many primary symptoms are established
-        primary_keys = ["cough_weeks", "hemoptysis", "night_fever", "weight_loss", "dyspnea", "night_sweats"]
-        known_count = sum(1 for k in primary_keys if symptoms.get(k) is not None and symptoms.get(k) != "mentioned_unknown_duration")
+        for spec in DYNAMIC_QUESTION_BANK.values():
+            target = spec["target"]
+            if target in ("cough_weeks", "cough_phlegm") and symptoms.get("cough_weeks") == 0:
+                continue
+            val = symptoms.get(target)
+            if val is None or val == "mentioned_unknown_duration":
+                return False
 
-        if known_count >= 5:
-            return True
-
-        return False
+        return True

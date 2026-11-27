@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import get_settings
 from app.db.database import connect_db, close_db, is_db_connected
-from app.api import auth, patient, doctor, admin, test_rbac, asha, voice, chat
+from app.api import auth, patient, doctor, admin, test_rbac, asha, voice, chat, l2
 
 settings = get_settings()
 
@@ -83,6 +83,7 @@ app.include_router(asha.router,     prefix=f"{settings.API_V1_PREFIX}",      tag
 app.include_router(test_rbac.router,prefix=f"{settings.API_V1_PREFIX}",      tags=["Test RBAC"])
 app.include_router(voice.router,    prefix=f"{settings.API_V1_PREFIX}",      tags=["Voice"])
 app.include_router(chat.router,     prefix=f"{settings.API_V1_PREFIX}",      tags=["Chat"])
+app.include_router(l2.router,       prefix=f"{settings.API_V1_PREFIX}/l2",   tags=["L2 TB Detection"])
 
 
 @app.get("/health")

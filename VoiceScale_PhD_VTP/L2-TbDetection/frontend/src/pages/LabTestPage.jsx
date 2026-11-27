@@ -66,13 +66,6 @@ export default function LabTestPage({ onResult, result }) {
             rapid TB diagnostic with near-100% specificity.
           </p>
         </div>
-        <div className={styles.modelChip}>
-          <div className={styles.modelChipDot} />
-          <div>
-            <div className={styles.modelChipLabel}>Logic Type</div>
-            <div className={styles.modelChipName}>Rule-Based</div>
-          </div>
-        </div>
       </div>
 
       {/* ── Main grid ───────────────────────────────────────────────── */}
